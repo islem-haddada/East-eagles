@@ -1,0 +1,44 @@
+.navigation {
+  display: flex;
+  align-items: center;
+}
+
+.nav-list {
+  display: flex;
+  list-style: none;
+  gap: 25px;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-list a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.3s ease;
+  padding: 8px 15px;
+  border-radius: 5px;
+}
+
+.nav-list a:hover {
+  opacity: 0.8;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-cta {
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 8px 20px !important;
+  border-radius: 20px;
+}
+
+.nav-cta:hover {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+@media (max-width: 768px) {
+  .nav-list {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+}

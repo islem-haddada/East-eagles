@@ -1,0 +1,28 @@
+.event-list {
+  padding: 20px 0;
+}
+
+.event-list h2 {
+  margin-bottom: 30px;
+  color: #2c3e50;
+  font-size: 32px;
+}
+
+.event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 25px;
+}
+
+.no-events {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .event-grid {
+    grid-template-columns: 1fr;
+  }
+}
