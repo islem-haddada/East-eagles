@@ -40,8 +40,17 @@ const RegistrationForm = () => {
         field_of_study: ''
       });
     } catch (err) {
-      setError('Erreur lors de l\'inscription. Veuillez réessayer.');
-      console.error(err);
+      // Prefer server-provided message when available
+      const msg = err && err.message ? err.message : '';
+      if (/email/i.test(msg) || msg.includes('duplicate') || msg.includes('409')) {
+        setError('Cet email est déjà utilisé. Veuillez en choisir un autre.');
+      } else if (msg) {
+        // Show server message (trim status prefix if present)
+        setError(msg.replace(/^Erreur \d+:\s*/i, ''));
+      } else {
+        setError('Erreur lors de l\'inscription. Vérifiez votre connexion et réessayez.');
+      }
+      console.error('Registration error:', err);
     } finally {
       setLoading(false);
     }

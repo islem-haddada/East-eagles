@@ -12,9 +12,9 @@ const AnnouncementList = () => {
     const fetchAnnouncements = async () => {
       try {
         const data = await announcementAPI.getAll();
-        setAnnouncements(data);
+        setAnnouncements(data || []);
       } catch (err) {
-        setError('Erreur lors du chargement des annonces');
+        setError('Impossible de charger les annonces. Vérifiez que le serveur backend est démarré.');
         console.error(err);
       } finally {
         setLoading(false);

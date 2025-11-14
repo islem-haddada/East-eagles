@@ -12,9 +12,9 @@ const EventList = () => {
     const fetchEvents = async () => {
       try {
         const data = await eventAPI.getAll();
-        setEvents(data);
+        setEvents(data || []);
       } catch (err) {
-        setError('Erreur lors du chargement des événements');
+        setError('Impossible de charger les événements. Vérifiez que le serveur backend est démarré.');
         console.error(err);
       } finally {
         setLoading(false);

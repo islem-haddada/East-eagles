@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
-	"github.com/gorilla/mux"
 	"beautiful-minds/backend/project/internal/models"
 	"beautiful-minds/backend/project/internal/repository"
+
+	"github.com/gorilla/mux"
 )
 
 type MemberHandler struct {
@@ -51,6 +53,14 @@ func (h *MemberHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateMemberRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Données invalides", http.StatusBadRequest)
+		return
+	}
+
+	// Trim and validate required fields
+	req.FirstName = strings.TrimSpace(req.FirstName)
+	req.LastName = strings.TrimSpace(req.LastName)
+	if req.FirstName == "" || req.LastName == "" {
+		http.Error(w, "Le prénom et le nom sont requis", http.StatusBadRequest)
 		return
 	}
 
