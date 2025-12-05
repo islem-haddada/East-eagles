@@ -2,12 +2,12 @@ version: '2.8'
 services:
   postgres:
     image: postgres:latest
-    container_name: club_scientific
+    container_name: east_eagles
     env_file:
       - ./app.env
     # Map container's default Postgres port 5432 to host 5432
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
     networks:
