@@ -1,31 +1,64 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Header from './components/layout/Header';
-import Footer from './components/layout/Footer';
-import Home from './pages/Home';
-import Events from './pages/Events';
-import About from './pages/About';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Login from './pages/Login';
 import Register from './pages/Register';
-import Admin from './pages/Admin';
+import Layout from './components/layout/Layout';
+import Dashboard from './pages/admin/Dashboard';
+import Athletes from './pages/admin/Athletes';
+import Trainings from './pages/admin/Trainings';
+import Attendance from './pages/admin/Attendance';
 import './App.css';
+
+// Protected Route Component
+const PrivateRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <div>Chargement...</div>;
+  }
+
+  return isAuthenticated ? children : <Navigate to="/login" />;
+};
+
+
 
 function App() {
   return (
-    <Router>
-      <div className="App">
-        <Header />
-        <main className="main-content">
+    <AuthProvider>
+      <Router>
+        <div className="App">
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/events" element={<Events />} />
-            <Route path="/about" element={<About />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/admin" element={<Admin />} />
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <Navigate to="/admin" replace />
+                </PrivateRoute>
+              }
+            />
+
+            {/* Admin Routes */}
+            <Route
+              path="/admin"
+              element={
+                <PrivateRoute>
+                  <Layout />
+                </PrivateRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="athletes" element={<Athletes />} />
+              <Route path="trainings" element={<Trainings />} />
+              <Route path="trainings/:id/attendance" element={<Attendance />} />
+              {/* <Route path="documents" element={<Documents />} /> */}
+            </Route>
           </Routes>
-        </main>
-        <Footer />
-      </div>
-    </Router>
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 

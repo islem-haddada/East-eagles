@@ -9,6 +9,7 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	Port       string
+	JWTSecret  string
 }
 
 func Load() *Config {
@@ -19,6 +20,7 @@ func Load() *Config {
 		DBPassword: getEnv("DB_PASSWORD", ""),
 		DBName:     getEnv("DB_NAME", "club_scientific"),
 		Port:       getEnv("PORT", "8080"),
+		JWTSecret:  getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
 	}
 }
 
