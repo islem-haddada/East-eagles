@@ -57,7 +57,6 @@ func main() {
 	log.Println("✅ Cloudinary service initialized")
 
 	// Initialiser les handlers
-	// Initialiser les handlers
 	athleteHandler := handlers.NewAthleteHandler(athleteRepo, cloudinaryService)
 	authHandler := handlers.NewAuthHandler(authService)
 	trainingHandler := handlers.NewTrainingHandler(trainingRepo)
@@ -109,6 +108,8 @@ func main() {
 	admin.HandleFunc("/athletes/{id}", athleteHandler.GetByID).Methods("GET")
 	admin.HandleFunc("/athletes/{id}/approve", athleteHandler.Approve).Methods("POST")
 	admin.HandleFunc("/athletes/{id}/reject", athleteHandler.Reject).Methods("POST")
+	admin.HandleFunc("/athletes/{id}", athleteHandler.Update).Methods("PUT")
+	admin.HandleFunc("/athletes/{id}", athleteHandler.Delete).Methods("DELETE")
 
 	// Training Management
 	admin.HandleFunc("/trainings", trainingHandler.Create).Methods("POST")

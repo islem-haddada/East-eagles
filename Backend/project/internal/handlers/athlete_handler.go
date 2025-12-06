@@ -251,19 +251,20 @@ func (h *AthleteHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	var req models.CreateAthleteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		fmt.Printf("❌ UpdateProfile JSON Decode Error: %v\n", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Ensure critical fields are not changed or are consistent
 	req.Email = email
-	// We might want to allow updating name, but for now let's keep it simple.
-	// The repo.Update expects a CreateAthleteRequest which has all fields.
-	// We should probably merge existing data with new data if the request is partial,
-	// but here we assume the frontend sends the full form.
+
+	// Log the request for debugging
+	fmt.Printf("📝 UpdateProfile Request Data: %+v\n", req)
 
 	updatedAthlete, err := h.repo.Update(athlete.ID, &req)
 	if err != nil {
+		fmt.Printf("❌ UpdateProfile Repo Error: %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -317,15 +318,31 @@ func (h *AthleteHandler) UploadProfileImage(w http.ResponseWriter, r *http.Reque
 	// For now, let's fetch the current athlete, update the image, and save it back.
 	// Ideally, we should have a specific UpdateProfileImage method in repo, but Update works if we fill all fields.
 
+	// Prepare nullable fields safely
+	var birthDateStr string
+	if athlete.BirthDate != nil {
+		birthDateStr = athlete.BirthDate.Format("2006-01-02")
+	}
+
+	var weight float64
+	if athlete.Weight != nil {
+		weight = *athlete.Weight
+	}
+
+	var height float64
+	if athlete.Height != nil {
+		height = *athlete.Height
+	}
+
 	// Create request from existing athlete data
 	req := &models.CreateAthleteRequest{
 		FirstName:                athlete.FirstName,
 		LastName:                 athlete.LastName,
 		Email:                    athlete.Email,
 		Phone:                    athlete.Phone,
-		BirthDate:                athlete.BirthDate.Format("2006-01-02"), // Assuming BirthDate is not nil
-		Weight:                   *athlete.Weight,
-		Height:                   *athlete.Height,
+		BirthDate:                birthDateStr,
+		Weight:                   weight,
+		Height:                   height,
 		Gender:                   athlete.Gender,
 		Address:                  athlete.Address,
 		BeltLevel:                athlete.BeltLevel,
@@ -338,10 +355,6 @@ func (h *AthleteHandler) UploadProfileImage(w http.ResponseWriter, r *http.Reque
 		Allergies:                athlete.Allergies,
 		BloodType:                athlete.BloodType,
 		ProfileImage:             imageURL, // The new image
-	}
-
-	if athlete.BirthDate == nil {
-		req.BirthDate = ""
 	}
 
 	updatedAthlete, err := h.repo.Update(athlete.ID, req)

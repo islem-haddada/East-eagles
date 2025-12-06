@@ -48,6 +48,9 @@ export const athleteAPI = {
   getStats: () => api.get('/admin/athletes/stats'), // Assuming this exists
   getProfile: () => api.get('/athletes/profile'), // This is correct (athlete side)
   updateProfile: (data) => api.put('/athletes/profile', data), // This is correct
+  uploadProfileImage: (formData) => api.post('/athletes/profile/image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
   getById: (id) => api.get(`/admin/athletes/${id}`),
   create: (data) => api.post('/admin/athletes', data), // Assuming admin creates athletes
   update: (id, data) => api.put(`/admin/athletes/${id}`, data),
