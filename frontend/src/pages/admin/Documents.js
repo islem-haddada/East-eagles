@@ -4,6 +4,14 @@ import { useNotification } from '../../context/NotificationContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import './Documents.css';
 
+const REQUIRED_DOCUMENTS = [
+    { type: 'medical_certificate', label: 'Certificat Médical' },
+    { type: 'insurance', label: 'Assurance Sportive' },
+    { type: 'id_card', label: 'Carte d\'Identité' },
+    { type: 'photo', label: 'Photo d\'Identité' },
+    { type: 'parental_consent', label: 'Autorisation Parentale (Mineurs)' }
+];
+
 const Documents = () => {
     const notify = useNotification();
     const confirm = useConfirm();
@@ -15,6 +23,10 @@ const Documents = () => {
     const [selectedAthlete, setSelectedAthlete] = useState(null); // Selected athlete for folder view
     const [athleteDocuments, setAthleteDocuments] = useState([]); // Documents for selected athlete
     const [loading, setLoading] = useState(true);
+
+    // Advanced Features State
+    const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'approved', 'rejected', 'pending'
+    const [previewDoc, setPreviewDoc] = useState(null); // Document to preview
 
     // Fetch pending documents
     const fetchPendingDocuments = async () => {
@@ -72,6 +84,7 @@ const Documents = () => {
         setActiveTab(tab);
         setSelectedAthlete(null);
         setAthleteDocuments([]);
+        setFilterStatus('all');
     };
 
     // Handle athlete selection
@@ -133,10 +146,51 @@ const Documents = () => {
         window.open(documentAPI.download(id), '_blank');
     };
 
+    const handlePreview = (doc) => {
+        // If image or PDF, show preview
+        if (doc.mime_type && (doc.mime_type.startsWith('image/') || doc.mime_type === 'application/pdf')) {
+            setPreviewDoc(doc);
+        } else {
+            // Fallback to download
+            handleDownload(doc.id);
+        }
+    };
+
+    // Calculate Compliance
+    const getComplianceStatus = () => {
+        if (!selectedAthlete || !athleteDocuments) return { score: 0, missing: [] };
+
+        const uploadedTypes = new Set(
+            athleteDocuments
+                .filter(d => d.validation_status === 'approved' || d.validation_status === 'pending')
+                .map(d => d.document_type)
+        );
+
+        const missing = REQUIRED_DOCUMENTS.filter(req => {
+            // Skip parental consent if athlete is adult (assuming > 18)
+            // For now, we'll just list it as required for everyone or add logic if we had birthdate
+            return !uploadedTypes.has(req.type);
+        });
+
+        const score = Math.round(((REQUIRED_DOCUMENTS.length - missing.length) / REQUIRED_DOCUMENTS.length) * 100);
+
+        return { score, missing };
+    };
+
+    const compliance = getComplianceStatus();
+
+    // Filtered Documents
+    const filteredDocuments = athleteDocuments.filter(doc => {
+        if (filterStatus === 'all') return true;
+        return doc.validation_status === filterStatus;
+    });
+
     // Render Document Card
     const renderDocumentCard = (doc, showActions = true) => (
         <div key={doc.id} className="document-card">
-            <div className="doc-icon">📄</div>
+            <div className="doc-icon">
+                {doc.mime_type && doc.mime_type.startsWith('image/') ? '🖼️' : '📄'}
+            </div>
             <div className="doc-info">
                 <h3>{doc.document_type}</h3>
                 <p className="filename">{doc.file_name}</p>
@@ -150,11 +204,18 @@ const Documents = () => {
             </div>
             <div className="doc-actions">
                 <button
+                    onClick={() => handlePreview(doc)}
+                    className="btn-download"
+                    title="Aperçu"
+                >
+                    Aperçu
+                </button>
+                <button
                     onClick={() => handleDownload(doc.id)}
                     className="btn-download"
-                    title="Télécharger/Voir"
+                    title="Télécharger"
                 >
-                    Voir
+                    ⬇️
                 </button>
 
                 {/* Show validate/reject buttons if pending */}
@@ -251,16 +312,102 @@ const Documents = () => {
                         <h2>Dossier: {selectedAthlete.first_name} {selectedAthlete.last_name}</h2>
                     </div>
 
+                    {/* Compliance Section */}
+                    <div className="compliance-section">
+                        <div className="compliance-header">
+                            <h3>État du Dossier</h3>
+                            <span className="compliance-score">{compliance.score}% Complet</span>
+                        </div>
+                        <div className="progress-bar">
+                            <div
+                                className={`progress-fill ${compliance.score < 100 ? 'incomplete' : ''}`}
+                                style={{ width: `${compliance.score}%` }}
+                            ></div>
+                        </div>
+
+                        {compliance.missing.length > 0 ? (
+                            <div className="missing-docs">
+                                <h4>Documents Manquants :</h4>
+                                {compliance.missing.map((doc, index) => (
+                                    <div key={index} className="missing-doc-item">
+                                        <span className="missing-icon">⚠️</span>
+                                        <span>{doc.label} est requis</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="missing-doc-item" style={{ borderColor: 'var(--success-color)', color: 'var(--success-color)', background: 'rgba(76, 175, 80, 0.1)' }}>
+                                <span className="missing-icon">✅</span>
+                                <span>Dossier complet</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Filters */}
+                    <div className="filters">
+                        <button
+                            className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
+                            onClick={() => setFilterStatus('all')}
+                        >
+                            Tous
+                        </button>
+                        <button
+                            className={`filter-btn ${filterStatus === 'approved' ? 'active' : ''}`}
+                            onClick={() => setFilterStatus('approved')}
+                        >
+                            Validés
+                        </button>
+                        <button
+                            className={`filter-btn ${filterStatus === 'pending' ? 'active' : ''}`}
+                            onClick={() => setFilterStatus('pending')}
+                        >
+                            En Attente
+                        </button>
+                        <button
+                            className={`filter-btn ${filterStatus === 'rejected' ? 'active' : ''}`}
+                            onClick={() => setFilterStatus('rejected')}
+                        >
+                            Rejetés
+                        </button>
+                    </div>
+
                     <div className="documents-list">
                         {loading ? (
                             <div>Chargement...</div>
-                        ) : athleteDocuments.length > 0 ? (
-                            athleteDocuments.map(doc => renderDocumentCard(doc, true))
+                        ) : filteredDocuments.length > 0 ? (
+                            filteredDocuments.map(doc => renderDocumentCard(doc, true))
                         ) : (
                             <div className="empty-state">
-                                <p>Aucun document dans ce dossier.</p>
+                                <p>Aucun document trouvé pour ce filtre.</p>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Preview Modal */}
+            {previewDoc && (
+                <div className="modal-overlay" onClick={() => setPreviewDoc(null)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>Aperçu: {previewDoc.file_name}</h3>
+                            <button className="btn-close" onClick={() => setPreviewDoc(null)}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            {previewDoc.mime_type === 'application/pdf' ? (
+                                <iframe
+                                    src={documentAPI.download(previewDoc.id)}
+                                    className="preview-iframe"
+                                    title="PDF Preview"
+                                />
+                            ) : (
+                                <img
+                                    src={documentAPI.download(previewDoc.id)}
+                                    alt="Preview"
+                                    className="preview-image"
+                                />
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
