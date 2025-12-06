@@ -121,6 +121,7 @@ func main() {
 	admin.HandleFunc("/documents/pending", documentHandler.GetPending).Methods("GET")
 	admin.HandleFunc("/documents/{id}/validate", documentHandler.Validate).Methods("POST")
 	admin.HandleFunc("/documents/{id}/reject", documentHandler.Reject).Methods("POST")
+	admin.HandleFunc("/documents/athlete/{id}", documentHandler.GetByAthlete).Methods("GET")
 
 	// Payment Management
 	admin.HandleFunc("/payments", paymentHandler.Create).Methods("POST")

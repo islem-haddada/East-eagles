@@ -72,7 +72,8 @@ export const documentAPI = {
   upload: (formData) => api.post('/documents/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
-  getByAthlete: (id) => api.get(`/documents/my`), // Uses auth context
+  getByAthlete: (id) => api.get(`/admin/documents/athlete/${id}`),
+  getMyDocuments: () => api.get(`/documents/my`), // Uses auth context
   getPending: () => api.get('/admin/documents/pending'),
   validate: (id) => api.post(`/admin/documents/${id}/validate`),
   reject: (id, reason) => api.post(`/admin/documents/${id}/reject`, { reason }),
