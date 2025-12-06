@@ -42,6 +42,10 @@ type Athlete struct {
 	MedicalConditions string `json:"medical_conditions"`
 	Allergies         string `json:"allergies"`
 	BloodType         string `json:"blood_type"`
+
+	// Payment Status (computed from payments table)
+	PaymentEndDate *string `json:"payment_end_date,omitempty"` // Last payment end date
+	PaymentValid   *bool   `json:"payment_valid,omitempty"`    // Whether payment is currently valid
 }
 
 // CreateAthleteRequest for registration

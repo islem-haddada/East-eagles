@@ -10,6 +10,11 @@ type Config struct {
 	DBName     string
 	Port       string
 	JWTSecret  string
+
+	// Cloudinary
+	CloudinaryCloudName string
+	CloudinaryAPIKey    string
+	CloudinaryAPISecret string
 }
 
 func Load() *Config {
@@ -21,6 +26,10 @@ func Load() *Config {
 		DBName:     getEnv("DB_NAME", "club_scientific"),
 		Port:       getEnv("PORT", "8080"),
 		JWTSecret:  getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
+
+		CloudinaryCloudName: getEnv("CLOUDINARY_CLOUD_NAME", ""),
+		CloudinaryAPIKey:    getEnv("CLOUDINARY_API_KEY", ""),
+		CloudinaryAPISecret: getEnv("CLOUDINARY_API_SECRET", ""),
 	}
 }
 

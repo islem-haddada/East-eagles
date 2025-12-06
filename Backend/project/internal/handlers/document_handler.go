@@ -2,31 +2,29 @@ package handlers
 
 import (
 	"encoding/json"
-	"io"
+	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
 	"time"
 
 	"beautiful-minds/backend/project/internal/middleware"
 	"beautiful-minds/backend/project/internal/models"
 	"beautiful-minds/backend/project/internal/repository"
+	"beautiful-minds/backend/project/internal/services"
 
 	"github.com/gorilla/mux"
 )
 
 type DocumentHandler struct {
-	repo      *repository.DocumentRepository
-	uploadDir string
+	repo              *repository.DocumentRepository
+	cloudinaryService *services.CloudinaryService
 }
 
-func NewDocumentHandler(repo *repository.DocumentRepository, uploadDir string) *DocumentHandler {
-	// Ensure upload directory exists
-	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
-		os.MkdirAll(uploadDir, 0755)
+func NewDocumentHandler(repo *repository.DocumentRepository, cloudinaryService *services.CloudinaryService) *DocumentHandler {
+	return &DocumentHandler{
+		repo:              repo,
+		cloudinaryService: cloudinaryService,
 	}
-	return &DocumentHandler{repo: repo, uploadDir: uploadDir}
 }
 
 // Upload handles document upload
@@ -55,19 +53,13 @@ func (h *DocumentHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create unique filename
-	filename := strconv.FormatInt(time.Now().UnixNano(), 10) + filepath.Ext(handler.Filename)
-	filePath := filepath.Join(h.uploadDir, filename)
+	filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), handler.Filename)
+	folderPath := fmt.Sprintf("east-eagles/documents/athlete_%d", athleteID)
 
-	// Save file to disk
-	dst, err := os.Create(filePath)
+	// Upload to Cloudinary
+	fileURL, err := h.cloudinaryService.UploadDocument(file, filename, folderPath)
 	if err != nil {
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
-		return
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, file); err != nil {
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
+		http.Error(w, "Error uploading file to cloud storage: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -76,8 +68,8 @@ func (h *DocumentHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		AthleteID:        athleteID,
 		DocumentType:     docType,
 		FileName:         handler.Filename,
-		FilePath:         filePath,
-		FileURL:          "/uploads/" + filename, // Assuming static file serving
+		FilePath:         "", // No longer using local file path
+		FileURL:          fileURL,
 		FileSizeBytes:    handler.Size,
 		MimeType:         handler.Header.Get("Content-Type"),
 		ValidationStatus: "pending",
@@ -92,8 +84,6 @@ func (h *DocumentHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.Create(doc); err != nil {
-		// Cleanup file if db insert fails
-		os.Remove(filePath)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -121,6 +111,29 @@ func (h *DocumentHandler) GetByAthlete(w http.ResponseWriter, r *http.Request) {
 	if role == models.RoleAthlete {
 		// Placeholder check - in real app, check ownership
 	}
+
+	docs, err := h.repo.GetByAthlete(athleteID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(docs)
+}
+
+// GetMyDocuments returns documents for the currently authenticated athlete
+func (h *DocumentHandler) GetMyDocuments(w http.ResponseWriter, r *http.Request) {
+	// Get user ID from context
+	userID, ok := r.Context().Value(middleware.UserIDKey).(int)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// For athletes, user ID equals athlete ID since they share the same ID
+	// (based on the database schema where users table has user data)
+	athleteID := userID
 
 	docs, err := h.repo.GetByAthlete(athleteID)
 	if err != nil {
@@ -200,7 +213,7 @@ func (h *DocumentHandler) Reject(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Document rejeté"})
 }
 
-// Download serves the document file
+// Download serves the document file by redirecting to Cloudinary URL
 func (h *DocumentHandler) Download(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -217,7 +230,6 @@ func (h *DocumentHandler) Download(w http.ResponseWriter, r *http.Request) {
 
 	// Check permissions (similar to GetByAthlete)
 
-	w.Header().Set("Content-Disposition", "attachment; filename="+doc.FileName)
-	w.Header().Set("Content-Type", doc.MimeType)
-	http.ServeFile(w, r, doc.FilePath)
+	// Redirect to Cloudinary URL
+	http.Redirect(w, r, doc.FileURL, http.StatusFound)
 }

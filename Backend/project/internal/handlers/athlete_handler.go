@@ -209,3 +209,58 @@ func (h *AthleteHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)
 }
+
+// GetProfile returns the profile of the authenticated athlete
+func (h *AthleteHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	email, ok := r.Context().Value(middleware.UserEmailKey).(string)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	athlete, err := h.repo.GetByEmail(email)
+	if err != nil {
+		http.Error(w, "Athlete profile not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(athlete)
+}
+
+// UpdateProfile updates the profile of the authenticated athlete
+func (h *AthleteHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	email, ok := r.Context().Value(middleware.UserEmailKey).(string)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	athlete, err := h.repo.GetByEmail(email)
+	if err != nil {
+		http.Error(w, "Athlete profile not found", http.StatusNotFound)
+		return
+	}
+
+	var req models.CreateAthleteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Ensure critical fields are not changed or are consistent
+	req.Email = email
+	// We might want to allow updating name, but for now let's keep it simple.
+	// The repo.Update expects a CreateAthleteRequest which has all fields.
+	// We should probably merge existing data with new data if the request is partial,
+	// but here we assume the frontend sends the full form.
+
+	updatedAthlete, err := h.repo.Update(athlete.ID, &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updatedAthlete)
+}

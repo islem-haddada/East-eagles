@@ -21,13 +21,17 @@ func NewAuthHandler(authService *services.AuthService) *AuthHandler {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Invalid request payload"})
 		return
 	}
 
 	// Basic validation
 	if req.Email == "" || req.Password == "" || req.FirstName == "" || req.LastName == "" {
-		http.Error(w, "All fields are required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"message": "All fields are required"})
 		return
 	}
 
@@ -38,7 +42,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.authService.Register(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"message": err.Error()})
 		return
 	}
 
@@ -72,21 +78,18 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 // Me returns the current authenticated user
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
-	// User is already authenticated by middleware, so we can trust the context
-	// In a real app, we might want to fetch fresh data from DB, but for now let's just return what we have
-	// or fetch from DB using the ID in context
+	userID, ok := r.Context().Value(middleware.UserIDKey).(int)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
-	// For now, let's just return a success message or the claims info
-	// Ideally, we should fetch the full user from DB using the ID
-
-	userID := r.Context().Value(middleware.UserIDKey).(int)
-	// We would need access to userRepo here to fetch full user, or we can just return the ID
-	// Since AuthHandler only has AuthService, let's add a GetUserByID method to AuthService or just return ID
+	user, err := h.authService.GetCurrentUser(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"id":    userID,
-		"role":  r.Context().Value(middleware.UserRoleKey),
-		"email": r.Context().Value(middleware.UserEmailKey),
-	})
+	json.NewEncoder(w).Encode(user)
 }

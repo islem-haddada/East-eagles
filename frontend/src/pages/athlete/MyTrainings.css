@@ -1,0 +1,276 @@
+.my-trainings-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.my-trainings-page h1 {
+    margin: 0 0 2rem 0;
+    font-size: 2rem;
+    color: #1f2937;
+}
+
+.my-trainings-page h2 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.25rem;
+    color: #1f2937;
+    font-weight: 700;
+}
+
+/* Schedule Section */
+.schedule-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.weekly-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.weekly-card {
+    background: linear-gradient(135deg, #f0f7ff 0%, #e0efff 100%);
+    border-radius: 10px;
+    padding: 1.5rem;
+    border: 2px solid #3b82f6;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.weekly-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.day-header {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #1f2937;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.75rem;
+}
+
+.time-slot {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #3b82f6;
+    margin-bottom: 0.5rem;
+}
+
+.duration {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-left: 0.25rem;
+}
+
+.slot-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+}
+
+.slot-location {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+/* Upcoming Section */
+.upcoming-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.trainings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.training-card {
+    background: #f9fafb;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s;
+}
+
+.training-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #3b82f6;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.date-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.date-badge .day {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.date-badge .month {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+}
+
+.session-info h3 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.session-info .time {
+    margin: 0;
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.card-body p {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.875rem;
+    color: #4b5563;
+}
+
+.card-body p:last-child {
+    margin-bottom: 0;
+}
+
+.card-body strong {
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.description {
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+    border-top: 1px solid #e5e7eb;
+    font-style: italic;
+}
+
+/* History Section */
+.history-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    border-left: 4px solid;
+}
+
+.history-item.present {
+    border-left-color: #10b981;
+    background: linear-gradient(90deg, #f0fdf4 0%, #f9fafb 100%);
+}
+
+.history-item.absent {
+    border-left-color: #ef4444;
+    background: linear-gradient(90deg, #fef2f2 0%, #f9fafb 100%);
+}
+
+.history-item .date {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6b7280;
+    min-width: 120px;
+}
+
+.history-item .title {
+    flex: 1;
+    font-size: 0.938rem;
+    color: #1f2937;
+    font-weight: 500;
+}
+
+.history-item .status {
+    font-size: 0.875rem;
+    font-weight: 700;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+}
+
+.history-item.present .status {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.history-item.absent .status {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Loading */
+div {
+    box-sizing: border-box;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .my-trainings-page {
+        padding: 1rem;
+    }
+
+    .weekly-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .trainings-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .history-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .history-item .date {
+        min-width: auto;
+    }
+}

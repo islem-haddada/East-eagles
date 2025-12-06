@@ -213,7 +213,7 @@ func (r *TrainingRepository) MarkAttendance(req *models.MarkAttendanceRequest, m
 // GetAttendance returns attendance for a session
 func (r *TrainingRepository) GetAttendance(sessionID int) ([]*models.Attendance, error) {
 	query := `
-		SELECT id, training_session_id, athlete_id, attended, notes, created_at
+		SELECT id, training_session_id, athlete_id, attended, notes, marked_at
 		FROM attendance
 		WHERE training_session_id = $1
 	`
@@ -226,15 +226,47 @@ func (r *TrainingRepository) GetAttendance(sessionID int) ([]*models.Attendance,
 	var attendances []*models.Attendance
 	for rows.Next() {
 		a := &models.Attendance{}
-		// Note: created_at in struct vs marked_at in DB.
-		// Assuming struct has CreatedAt matching marked_at or similar
-		var createdAt time.Time
+		// Use marked_at from database which maps to CreatedAt in model
+		var markedAt time.Time
 		if err := rows.Scan(
-			&a.ID, &a.TrainingSessionID, &a.AthleteID, &a.Attended, &a.Notes, &createdAt,
+			&a.ID, &a.TrainingSessionID, &a.AthleteID, &a.Attended, &a.Notes, &markedAt,
 		); err != nil {
 			return nil, err
 		}
-		a.CreatedAt = createdAt
+		a.CreatedAt = markedAt
+		attendances = append(attendances, a)
+	}
+	return attendances, nil
+}
+
+// GetAttendanceByAthlete returns attendance history for an athlete
+func (r *TrainingRepository) GetAttendanceByAthlete(athleteID int) ([]*models.Attendance, error) {
+	query := `
+		SELECT a.id, a.training_session_id, a.athlete_id, a.attended, a.notes, a.marked_at,
+		       t.title, t.session_date
+		FROM attendance a
+		JOIN training_sessions t ON a.training_session_id = t.id
+		WHERE a.athlete_id = $1
+		ORDER BY t.session_date DESC
+	`
+	rows, err := r.db.Query(query, athleteID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var attendances []*models.Attendance
+	for rows.Next() {
+		a := &models.Attendance{}
+		var markedAt time.Time
+		// Scan attendance data along with session title and date for history display
+		if err := rows.Scan(
+			&a.ID, &a.TrainingSessionID, &a.AthleteID, &a.Attended, &a.Notes, &markedAt,
+			&a.SessionTitle, &a.SessionDate,
+		); err != nil {
+			return nil, err
+		}
+		a.CreatedAt = markedAt
 		attendances = append(attendances, a)
 	}
 	return attendances, nil

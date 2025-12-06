@@ -43,15 +43,34 @@ func main() {
 	// announcementRepo := repository.NewAnnouncementRepository(db) // Legacy
 
 	// Initialiser les services
-	authService := services.NewAuthService(userRepo, cfg.JWTSecret)
+	authService := services.NewAuthService(userRepo, athleteRepo, cfg.JWTSecret)
+
+	// Initialize Cloudinary service
+	cloudinaryService, err := services.NewCloudinaryService(
+		cfg.CloudinaryCloudName,
+		cfg.CloudinaryAPIKey,
+		cfg.CloudinaryAPISecret,
+	)
+	if err != nil {
+		log.Fatal("Erreur initialisation Cloudinary:", err)
+	}
+	log.Println("✅ Cloudinary service initialized")
 
 	// Initialiser les handlers
 	athleteHandler := handlers.NewAthleteHandler(athleteRepo)
 	authHandler := handlers.NewAuthHandler(authService)
 	trainingHandler := handlers.NewTrainingHandler(trainingRepo)
-	documentHandler := handlers.NewDocumentHandler(documentRepo, "./uploads")
+	documentHandler := handlers.NewDocumentHandler(documentRepo, cloudinaryService)
 	// eventHandler := handlers.NewEventHandler(eventRepo)
 	// announcementHandler := handlers.NewAnnouncementHandler(announcementRepo)
+
+	// --- Payments ---
+	paymentRepo := repository.NewPaymentRepository(db)
+	paymentHandler := handlers.NewPaymentHandler(paymentRepo, athleteRepo)
+
+	// --- Schedules ---
+	scheduleRepo := repository.NewScheduleRepository(db)
+	scheduleHandler := handlers.NewScheduleHandler(scheduleRepo)
 
 	// Créer le routeur
 	router := mux.NewRouter()
@@ -60,78 +79,71 @@ func main() {
 	router.Use(middleware.CORS)
 
 	// Servir les fichiers statiques (uploads)
-	// En production, utiliser nginx ou un service de stockage cloud
 	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	// Routes API
 	api := router.PathPrefix("/api").Subrouter()
 
-	// --- Routes Publiques ---
-	api.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
-	api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
+	// Public routes
+	router.HandleFunc("/api/auth/register", authHandler.Register).Methods("POST")
+	router.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST")
+	router.HandleFunc("/api/documents/{id}/download", documentHandler.Download).Methods("GET")
 
-	// --- Routes Protégées ---
-	protected := api.PathPrefix("").Subrouter()
-	protected.Use(middleware.AuthMiddleware(authService))
+	// Protected routes
+	// The 'api' subrouter is already defined above as router.PathPrefix("/api").Subrouter()
+	// We will use the existing 'api' variable for protected routes.
+	api.Use(middleware.AuthMiddleware(authService))
 
-	// Routes Auth
-	protected.HandleFunc("/auth/me", authHandler.Me).Methods("GET")
+	api.HandleFunc("/auth/me", authHandler.Me).Methods("GET")
+	api.HandleFunc("/athletes/profile", athleteHandler.GetProfile).Methods("GET")
+	api.HandleFunc("/athletes/profile", athleteHandler.UpdateProfile).Methods("PUT")
 
-	// Routes Athlètes
-	protected.HandleFunc("/athletes", athleteHandler.GetAll).Methods("GET")
-	protected.HandleFunc("/athletes/search", athleteHandler.Search).Methods("GET")
-	protected.HandleFunc("/athletes/{id}", athleteHandler.GetByID).Methods("GET")
-	protected.HandleFunc("/athletes", athleteHandler.Create).Methods("POST")
-	protected.HandleFunc("/athletes/{id}", athleteHandler.Update).Methods("PUT")
+	// --- Routes Admin/Coach ---
+	admin := api.PathPrefix("/admin").Subrouter()
+	admin.Use(middleware.RequireCoach)
 
-	// Routes Entraînements
-	protected.HandleFunc("/trainings", trainingHandler.GetAll).Methods("GET")
-	protected.HandleFunc("/trainings/upcoming", trainingHandler.GetUpcoming).Methods("GET")
-	protected.HandleFunc("/trainings/{id}", trainingHandler.GetByID).Methods("GET")
-	protected.HandleFunc("/trainings/{id}/attendance", trainingHandler.GetAttendance).Methods("GET")
-
-	// Routes Documents
-	protected.HandleFunc("/documents/upload", documentHandler.Upload).Methods("POST")
-	protected.HandleFunc("/documents/athlete/{id}", documentHandler.GetByAthlete).Methods("GET")
-	protected.HandleFunc("/documents/{id}/download", documentHandler.Download).Methods("GET")
-
-	// Routes Admin/Coach Only
-	admin := protected.PathPrefix("").Subrouter()
-	admin.Use(middleware.RequireCoach) // Coach can manage trainings too
-
-	// Admin/Coach Athletes
-	admin.HandleFunc("/athletes/pending", athleteHandler.GetPending).Methods("GET")
-	admin.HandleFunc("/athletes/stats", athleteHandler.GetStats).Methods("GET")
-	admin.HandleFunc("/athletes/{id}", athleteHandler.Delete).Methods("DELETE")
+	// Athletes Management
+	admin.HandleFunc("/athletes", athleteHandler.GetAll).Methods("GET")
+	admin.HandleFunc("/athletes/{id}", athleteHandler.GetByID).Methods("GET")
 	admin.HandleFunc("/athletes/{id}/approve", athleteHandler.Approve).Methods("POST")
 	admin.HandleFunc("/athletes/{id}/reject", athleteHandler.Reject).Methods("POST")
 
-	// Admin/Coach Trainings
+	// Training Management
 	admin.HandleFunc("/trainings", trainingHandler.Create).Methods("POST")
+	admin.HandleFunc("/trainings", trainingHandler.GetAll).Methods("GET")
+	admin.HandleFunc("/trainings/{id}", trainingHandler.GetByID).Methods("GET")
 	admin.HandleFunc("/trainings/{id}", trainingHandler.Update).Methods("PUT")
 	admin.HandleFunc("/trainings/{id}", trainingHandler.Delete).Methods("DELETE")
 	admin.HandleFunc("/trainings/{id}/attendance", trainingHandler.MarkAttendance).Methods("POST")
+	admin.HandleFunc("/trainings/{id}/attendance", trainingHandler.GetAttendance).Methods("GET")
 
-	// Admin Documents
+	// Document Management
 	admin.HandleFunc("/documents/pending", documentHandler.GetPending).Methods("GET")
 	admin.HandleFunc("/documents/{id}/validate", documentHandler.Validate).Methods("POST")
 	admin.HandleFunc("/documents/{id}/reject", documentHandler.Reject).Methods("POST")
 
-	// Legacy routes (commented out for now to focus on Sanda)
-	/*
-		api.HandleFunc("/events", eventHandler.GetAll).Methods("GET")
-		api.HandleFunc("/events", eventHandler.Create).Methods("POST")
-		api.HandleFunc("/events/{id}", eventHandler.GetByID).Methods("GET")
-		api.HandleFunc("/events/{id}", eventHandler.Update).Methods("PUT")
-		api.HandleFunc("/events/{id}", eventHandler.Delete).Methods("DELETE")
-		api.HandleFunc("/events/{id}/register", eventHandler.RegisterMember).Methods("POST")
+	// Payment Management
+	admin.HandleFunc("/payments", paymentHandler.Create).Methods("POST")
+	admin.HandleFunc("/payments/recent", paymentHandler.GetRecent).Methods("GET")
+	admin.HandleFunc("/payments/athlete/{id}", paymentHandler.GetByAthlete).Methods("GET")
+	admin.HandleFunc("/payments/{id}", paymentHandler.Update).Methods("PUT")
+	admin.HandleFunc("/payments/{id}", paymentHandler.Delete).Methods("DELETE")
 
-		api.HandleFunc("/announcements", announcementHandler.GetAll).Methods("GET")
-		api.HandleFunc("/announcements", announcementHandler.Create).Methods("POST")
-		api.HandleFunc("/announcements/{id}", announcementHandler.GetByID).Methods("GET")
-		api.HandleFunc("/announcements/{id}", announcementHandler.Update).Methods("PUT")
-		api.HandleFunc("/announcements/{id}", announcementHandler.Delete).Methods("DELETE")
-	*/
+	// Schedule Management
+	admin.HandleFunc("/schedules", scheduleHandler.Create).Methods("POST")
+	admin.HandleFunc("/schedules", scheduleHandler.GetAll).Methods("GET")
+	admin.HandleFunc("/schedules/{id}", scheduleHandler.Update).Methods("PUT")
+	admin.HandleFunc("/schedules/{id}", scheduleHandler.Delete).Methods("DELETE")
+
+	// Athlete/Coach Shared Routes
+	api.HandleFunc("/trainings/upcoming", trainingHandler.GetUpcoming).Methods("GET")
+	api.HandleFunc("/trainings/history", trainingHandler.GetHistory).Methods("GET")
+	api.HandleFunc("/payments/my", paymentHandler.GetMyPayments).Methods("GET")
+	api.HandleFunc("/schedules", scheduleHandler.GetAll).Methods("GET")
+
+	// Document Upload (Athlete)
+	api.HandleFunc("/documents/upload", documentHandler.Upload).Methods("POST")
+	api.HandleFunc("/documents/my", documentHandler.GetMyDocuments).Methods("GET")
 
 	// Handle all OPTIONS requests for CORS preflight
 	api.PathPrefix("").Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

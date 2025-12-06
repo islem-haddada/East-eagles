@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { trainingAPI } from '../../services/api';
+import { trainingAPI, athleteAPI } from '../../services/api';
+import { useNotification } from '../../context/NotificationContext';
+import { useConfirm } from '../../context/ConfirmContext';
 import './Trainings.css';
 
 const Trainings = () => {
+    const notify = useNotification();
+    const confirm = useConfirm();
     const [trainings, setTrainings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -33,12 +37,21 @@ const Trainings = () => {
     }, []);
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Supprimer cette séance ?')) return;
+        const confirmed = await confirm(
+            'Supprimer cette séance ?',
+            {
+                title: 'Supprimer la séance',
+                confirmText: 'Supprimer',
+                cancelText: 'Annuler',
+                type: 'danger'
+            }
+        );
+        if (!confirmed) return;
         try {
             await trainingAPI.delete(id);
             fetchTrainings();
         } catch (error) {
-            alert('Erreur lors de la suppression');
+            notify.error('Erreur lors de la suppression');
         }
     };
 
@@ -46,12 +59,15 @@ const Trainings = () => {
         e.preventDefault();
         try {
             // Format date for backend "YYYY-MM-DD HH:mm"
-            const dateObj = new Date(formData.session_date);
-            const formattedDate = dateObj.toISOString().slice(0, 16).replace('T', ' ');
+            // Use the raw value from input (YYYY-MM-DDTHH:mm) and replace T with space
+            // This preserves local time selected by user
+            const formattedDate = formData.session_date.replace('T', ' ');
 
             await trainingAPI.create({
                 ...formData,
-                session_date: formattedDate
+                session_date: formattedDate,
+                duration_minutes: parseInt(formData.duration_minutes),
+                max_participants: parseInt(formData.max_participants)
             });
             setShowForm(false);
             fetchTrainings();
@@ -65,7 +81,8 @@ const Trainings = () => {
                 level: 'all'
             });
         } catch (error) {
-            alert('Erreur lors de la création');
+            console.error("Create error:", error);
+            notify.error(`Erreur lors de la création: ${error.response?.data || error.message} `);
         }
     };
 
@@ -81,7 +98,7 @@ const Trainings = () => {
     return (
         <div className="trainings-page">
             <div className="page-header">
-                <h1>Gestion des Entraînements</h1>
+                <h1>Planning</h1>
                 <button onClick={() => setShowForm(!showForm)} className="btn-primary">
                     {showForm ? 'Annuler' : 'Nouvelle Séance'}
                 </button>
@@ -163,18 +180,18 @@ const Trainings = () => {
                             </p>
                         </div>
                         <div className="training-actions">
-                            <Link to={`/admin/trainings/${session.id}/attendance`} className="btn-attendance">
+                            <Link to={`/ admin / trainings / ${session.id}/attendance`} className="btn-attendance" >
                                 Présences
-                            </Link>
+                            </Link >
                             <button onClick={() => handleDelete(session.id)} className="btn-delete">
                                 Supprimer
                             </button>
-                        </div>
-                    </div>
+                        </div >
+                    </div >
                 ))}
                 {trainings.length === 0 && <p>Aucune séance programmée.</p>}
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

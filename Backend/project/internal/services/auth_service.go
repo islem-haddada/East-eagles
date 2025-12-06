@@ -11,8 +11,9 @@ import (
 )
 
 type AuthService struct {
-	userRepo  *repository.UserRepository
-	jwtSecret []byte
+	userRepo    *repository.UserRepository
+	athleteRepo *repository.AthleteRepository
+	jwtSecret   []byte
 }
 
 type CustomClaims struct {
@@ -22,10 +23,11 @@ type CustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-func NewAuthService(userRepo *repository.UserRepository, jwtSecret string) *AuthService {
+func NewAuthService(userRepo *repository.UserRepository, athleteRepo *repository.AthleteRepository, jwtSecret string) *AuthService {
 	return &AuthService{
-		userRepo:  userRepo,
-		jwtSecret: []byte(jwtSecret),
+		userRepo:    userRepo,
+		athleteRepo: athleteRepo,
+		jwtSecret:   []byte(jwtSecret),
 	}
 }
 
@@ -50,6 +52,28 @@ func (s *AuthService) Register(req *models.CreateUserRequest) (*models.User, err
 
 	if err := s.userRepo.Create(user); err != nil {
 		return nil, err
+	}
+
+	// If role is athlete, create athlete record
+	if req.Role == models.RoleAthlete {
+		athleteReq := &models.CreateAthleteRequest{
+			FirstName: req.FirstName,
+			LastName:  req.LastName,
+			Email:     req.Email,
+			// Provide defaults for mandatory fields
+			Phone:                    "Non renseigné",
+			BirthDate:                "2000-01-01", // Default date
+			Gender:                   "other",      // Default gender
+			EmergencyContactName:     "Non renseigné",
+			EmergencyContactPhone:    "Non renseigné",
+			EmergencyContactRelation: "Non renseigné",
+			Address:                  "Non renseigné",
+		}
+		if _, err := s.athleteRepo.Create(athleteReq); err != nil {
+			// Rollback: Delete the user we just created
+			s.userRepo.Delete(user.ID)
+			return nil, err
+		}
 	}
 
 	return user, nil
@@ -110,4 +134,32 @@ func (s *AuthService) ValidateToken(tokenString string) (*CustomClaims, error) {
 	}
 
 	return nil, errors.New("invalid token")
+}
+
+// GetCurrentUser returns full user details including athlete status if applicable
+func (s *AuthService) GetCurrentUser(userID int) (map[string]interface{}, error) {
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	response := map[string]interface{}{
+		"id":         user.ID,
+		"email":      user.Email,
+		"first_name": user.FirstName,
+		"last_name":  user.LastName,
+		"role":       user.Role,
+	}
+
+	if user.Role == models.RoleAthlete {
+		athlete, err := s.athleteRepo.GetByEmail(user.Email)
+		if err == nil {
+			response["status"] = athlete.ApprovalStatus
+			response["athlete_id"] = athlete.ID
+		} else {
+			response["status"] = "unknown"
+		}
+	}
+
+	return response, nil
 }

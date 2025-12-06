@@ -1,8 +1,20 @@
+.athletes-page {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    font-size: 2rem;
+    color: #2c3e50;
+    font-weight: 700;
+    margin: 0;
 }
 
 .actions {
@@ -15,6 +27,22 @@
     padding: 0.5rem;
     border: 1px solid #ddd;
     border-radius: 4px;
+}
+
+.search-input:focus,
+.filter-select:focus {
+    outline: none;
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
+.search-input {
+    min-width: 250px;
+}
+
+.filter-select {
+    min-width: 180px;
+    cursor: pointer;
 }
 
 .table-container {
@@ -42,26 +70,60 @@ th {
     color: #555;
 }
 
-.status-badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 500;
+tr {
+    transition: background-color 0.2s ease;
 }
 
-.status-badge.active {
-    background-color: #e8f5e9;
-    color: #2e7d32;
+tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Remove colored badges - just text */
+.status-badge {
+    display: inline-block;
+    padding: 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    background: none !important;
+    border: none !important;
+}
+
+.status-badge.active,
+.status-badge.approved {
+    color: #065f46;
 }
 
 .status-badge.pending {
-    background-color: #fff3e0;
-    color: #ef6c00;
+    color: #92400e;
 }
 
-.status-badge.inactive {
-    background-color: #ffebee;
-    color: #c62828;
+.status-badge.inactive,
+.status-badge.rejected {
+    color: #991b1b;
+}
+
+/* Ensure badges stay in their cells */
+td .status-badge {
+    display: inline-block !important;
+    position: static !important;
+    vertical-align: middle;
+}
+
+/* Hide any floating badges outside table */
+.athletes-page>.status-badge,
+.page-header .status-badge {
+    display: none !important;
+}
+
+/* Payment column styling */
+td>div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
 .action-buttons {
@@ -79,6 +141,11 @@ th {
     cursor: pointer;
 }
 
+.btn-approve:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
 .btn-reject {
     background-color: #f44336;
     color: white;
@@ -89,6 +156,40 @@ th {
     cursor: pointer;
 }
 
+.btn-reject:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
 .text-center {
     text-align: center;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+    .table-container {
+        overflow-x: auto;
+    }
+
+    table {
+        min-width: 900px;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .search-input,
+    .filter-select {
+        width: 100%;
+    }
 }

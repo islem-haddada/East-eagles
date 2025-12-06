@@ -3,6 +3,8 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './Layout.css';
 
+import logo from '../../assets/logo.png';
+
 const Layout = () => {
     const { user, logout } = useAuth();
     const location = useLocation();
@@ -13,6 +15,7 @@ const Layout = () => {
         <div className="layout-container">
             <aside className="sidebar">
                 <div className="sidebar-header">
+                    <img src={logo} alt="East Eagles Logo" className="sidebar-logo" />
                     <h2>East Eagles</h2>
                     <p className="user-role">{user?.role?.toUpperCase()}</p>
                 </div>
@@ -23,8 +26,11 @@ const Layout = () => {
                     <Link to="/admin/athletes" className={isActive('/admin/athletes') ? 'active' : ''}>
                         Athlètes
                     </Link>
-                    <Link to="/admin/trainings" className={isActive('/admin/trainings') ? 'active' : ''}>
-                        Entraînements
+                    <Link to="/admin/schedule" className={isActive('/admin/schedule') ? 'active' : ''}>
+                        Planning
+                    </Link>
+                    <Link to="/admin/payments" className={isActive('/admin/payments') ? 'active' : ''}>
+                        Paiements
                     </Link>
                     <Link to="/admin/documents" className={isActive('/admin/documents') ? 'active' : ''}>
                         Documents

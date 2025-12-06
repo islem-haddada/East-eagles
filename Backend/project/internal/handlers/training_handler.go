@@ -36,6 +36,7 @@ func (h *TrainingHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.repo.Create(&req, coachID)
 	if err != nil {
+		// Log the error for debugging
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -179,4 +180,22 @@ func (h *TrainingHandler) GetAttendance(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(attendance)
+}
+
+// GetHistory returns attendance history for the authenticated athlete
+func (h *TrainingHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
+	athleteID, ok := r.Context().Value(middleware.UserIDKey).(int)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	history, err := h.repo.GetAttendanceByAthlete(athleteID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(history)
 }

@@ -35,6 +35,8 @@ type Attendance struct {
 	Attended          bool      `json:"attended"`
 	Notes             string    `json:"notes"`
 	CreatedAt         time.Time `json:"created_at"`
+	SessionTitle      string    `json:"session_title,omitempty"` // Added for history
+	SessionDate       time.Time `json:"session_date,omitempty"`  // Added for history
 }
 
 // MarkAttendanceRequest for marking attendance

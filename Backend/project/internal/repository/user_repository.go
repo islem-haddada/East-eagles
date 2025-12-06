@@ -129,3 +129,10 @@ func (r *UserRepository) GetByRole(role models.UserRole) ([]*models.User, error)
 	}
 	return users, nil
 }
+
+// Delete removes a user by ID
+func (r *UserRepository) Delete(id int) error {
+	query := `DELETE FROM users WHERE id = $1`
+	_, err := r.db.Exec(query, id)
+	return err
+}
