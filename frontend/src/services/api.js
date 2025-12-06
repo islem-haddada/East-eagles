@@ -77,7 +77,8 @@ export const documentAPI = {
   getPending: () => api.get('/admin/documents/pending'),
   validate: (id) => api.post(`/admin/documents/${id}/validate`),
   reject: (id, reason) => api.post(`/admin/documents/${id}/reject`, { reason }),
-  download: (id) => api.get(`/documents/${id}/download`, { responseType: 'blob' })
+  download: (id) => api.get(`/documents/${id}/download`, { responseType: 'blob' }),
+  getDownloadUrl: (id) => `${API_BASE_URL}/documents/${id}/download`
 };
 
 export const paymentAPI = {

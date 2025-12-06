@@ -3,8 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"beautiful-minds/backend/project/internal/middleware"
@@ -53,11 +55,18 @@ func (h *DocumentHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create unique filename
-	filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), handler.Filename)
+	// Append .txt to PDFs to bypass Cloudinary's "PDF as Image" restriction which causes 401 errors
+	// The backend Download handler will serve it with the correct Content-Type and Filename.
+	safeFilename := handler.Filename
+	if handler.Header.Get("Content-Type") == "application/pdf" || strings.HasSuffix(strings.ToLower(handler.Filename), ".pdf") {
+		safeFilename += ".txt"
+	}
+	filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), safeFilename)
 	folderPath := fmt.Sprintf("east-eagles/documents/athlete_%d", athleteID)
 
 	// Upload to Cloudinary
-	fileURL, err := h.cloudinaryService.UploadDocument(file, filename, folderPath)
+	// Use "raw" resource type to avoid issues with PDFs being treated as images (double extension, 401 errors)
+	fileURL, err := h.cloudinaryService.UploadDocument(file, filename, folderPath, "raw")
 	if err != nil {
 		http.Error(w, "Error uploading file to cloud storage: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -230,6 +239,23 @@ func (h *DocumentHandler) Download(w http.ResponseWriter, r *http.Request) {
 
 	// Check permissions (similar to GetByAthlete)
 
-	// Redirect to Cloudinary URL
-	http.Redirect(w, r, doc.FileURL, http.StatusFound)
+	// Proxy the file download
+	// Fetch from Cloudinary (which might be a .txt file to bypass restrictions)
+	resp, err := http.Get(doc.FileURL)
+	if err != nil {
+		http.Error(w, "Error fetching document", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Set headers
+	w.Header().Set("Content-Type", doc.MimeType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", doc.FileName))
+	w.Header().Set("Content-Length", strconv.FormatInt(resp.ContentLength, 10))
+
+	// Stream body
+	if _, err := io.Copy(w, resp.Body); err != nil {
+		// Can't send error header if body started writing, but log it
+		fmt.Printf("Error streaming file: %v\n", err)
+	}
 }

@@ -57,7 +57,8 @@ func main() {
 	log.Println("✅ Cloudinary service initialized")
 
 	// Initialiser les handlers
-	athleteHandler := handlers.NewAthleteHandler(athleteRepo)
+	// Initialiser les handlers
+	athleteHandler := handlers.NewAthleteHandler(athleteRepo, cloudinaryService)
 	authHandler := handlers.NewAuthHandler(authService)
 	trainingHandler := handlers.NewTrainingHandler(trainingRepo)
 	documentHandler := handlers.NewDocumentHandler(documentRepo, cloudinaryService)
@@ -81,22 +82,23 @@ func main() {
 	// Servir les fichiers statiques (uploads)
 	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
-	// Routes API
-	api := router.PathPrefix("/api").Subrouter()
-
-	// Public routes
+	// Public routes (Must be defined BEFORE the /api subrouter to avoid shadowing)
 	router.HandleFunc("/api/auth/register", authHandler.Register).Methods("POST")
 	router.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST")
-	router.HandleFunc("/api/documents/{id}/download", documentHandler.Download).Methods("GET")
 
-	// Protected routes
-	// The 'api' subrouter is already defined above as router.PathPrefix("/api").Subrouter()
-	// We will use the existing 'api' variable for protected routes.
+	// Routes API (Subrouter for /api)
+	api := router.PathPrefix("/api").Subrouter()
+
+	// Protected routes (Apply AuthMiddleware)
 	api.Use(middleware.AuthMiddleware(authService))
+
+	// Document Download (Protected via Query Param or Header)
+	api.HandleFunc("/documents/{id}/download", documentHandler.Download).Methods("GET")
 
 	api.HandleFunc("/auth/me", authHandler.Me).Methods("GET")
 	api.HandleFunc("/athletes/profile", athleteHandler.GetProfile).Methods("GET")
 	api.HandleFunc("/athletes/profile", athleteHandler.UpdateProfile).Methods("PUT")
+	api.HandleFunc("/athletes/profile/image", athleteHandler.UploadProfileImage).Methods("POST")
 
 	// --- Routes Admin/Coach ---
 	admin := api.PathPrefix("/admin").Subrouter()

@@ -25,14 +25,19 @@ func NewCloudinaryService(cloudName, apiKey, apiSecret string) (*CloudinaryServi
 }
 
 // UploadDocument uploads a document to Cloudinary
-func (s *CloudinaryService) UploadDocument(file multipart.File, filename string, folderPath string) (string, error) {
+func (s *CloudinaryService) UploadDocument(file multipart.File, filename string, folderPath string, resourceType string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
+	// Default to "auto" if not specified
+	if resourceType == "" {
+		resourceType = "auto"
+	}
 
 	// Upload file to Cloudinary
 	uploadParams := uploader.UploadParams{
 		Folder:       folderPath,
-		ResourceType: "auto", // Automatically detect file type
+		ResourceType: resourceType,
 		PublicID:     filename,
 	}
 

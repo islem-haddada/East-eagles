@@ -4,19 +4,26 @@ import (
 	"beautiful-minds/backend/project/internal/middleware"
 	"beautiful-minds/backend/project/internal/models"
 	"beautiful-minds/backend/project/internal/repository"
+	"beautiful-minds/backend/project/internal/services"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 )
 
 type AthleteHandler struct {
-	repo *repository.AthleteRepository
+	repo              *repository.AthleteRepository
+	cloudinaryService *services.CloudinaryService
 }
 
-func NewAthleteHandler(repo *repository.AthleteRepository) *AthleteHandler {
-	return &AthleteHandler{repo: repo}
+func NewAthleteHandler(repo *repository.AthleteRepository, cloudinaryService *services.CloudinaryService) *AthleteHandler {
+	return &AthleteHandler{
+		repo:              repo,
+		cloudinaryService: cloudinaryService,
+	}
 }
 
 // GetAll returns all athletes
@@ -258,6 +265,88 @@ func (h *AthleteHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	updatedAthlete, err := h.repo.Update(athlete.ID, &req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updatedAthlete)
+}
+
+// UploadProfileImage handles profile image upload
+func (h *AthleteHandler) UploadProfileImage(w http.ResponseWriter, r *http.Request) {
+	// 1. Parse multipart form (10MB max)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "Error parsing form", http.StatusBadRequest)
+		return
+	}
+
+	// 2. Get file
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Error retrieving file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// 3. Get user email from context
+	email, ok := r.Context().Value(middleware.UserEmailKey).(string)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// 4. Get athlete to get ID
+	athlete, err := h.repo.GetByEmail(email)
+	if err != nil {
+		http.Error(w, "Athlete not found", http.StatusNotFound)
+		return
+	}
+
+	// 5. Upload to Cloudinary
+	filename := fmt.Sprintf("profile_%d_%d_%s", athlete.ID, time.Now().Unix(), handler.Filename)
+	folderPath := "east-eagles/profiles"
+
+	imageURL, err := h.cloudinaryService.UploadDocument(file, filename, folderPath, "image")
+	if err != nil {
+		http.Error(w, "Error uploading to cloud: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// 6. Update Athlete Record
+	// We need to construct a full request or create a partial update method.
+	// For now, let's fetch the current athlete, update the image, and save it back.
+	// Ideally, we should have a specific UpdateProfileImage method in repo, but Update works if we fill all fields.
+
+	// Create request from existing athlete data
+	req := &models.CreateAthleteRequest{
+		FirstName:                athlete.FirstName,
+		LastName:                 athlete.LastName,
+		Email:                    athlete.Email,
+		Phone:                    athlete.Phone,
+		BirthDate:                athlete.BirthDate.Format("2006-01-02"), // Assuming BirthDate is not nil
+		Weight:                   *athlete.Weight,
+		Height:                   *athlete.Height,
+		Gender:                   athlete.Gender,
+		Address:                  athlete.Address,
+		BeltLevel:                athlete.BeltLevel,
+		ExperienceYears:          athlete.ExperienceYears,
+		PreviousMartialArts:      athlete.PreviousMartialArts,
+		EmergencyContactName:     athlete.EmergencyContactName,
+		EmergencyContactPhone:    athlete.EmergencyContactPhone,
+		EmergencyContactRelation: athlete.EmergencyContactRelation,
+		MedicalConditions:        athlete.MedicalConditions,
+		Allergies:                athlete.Allergies,
+		BloodType:                athlete.BloodType,
+		ProfileImage:             imageURL, // The new image
+	}
+
+	if athlete.BirthDate == nil {
+		req.BirthDate = ""
+	}
+
+	updatedAthlete, err := h.repo.Update(athlete.ID, req)
+	if err != nil {
+		http.Error(w, "Error updating database: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

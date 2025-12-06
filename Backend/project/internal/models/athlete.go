@@ -14,6 +14,7 @@ type Athlete struct {
 	RegistrationDate time.Time `json:"registration_date"`
 	IsActive         bool      `json:"is_active"`
 	CreatedAt        time.Time `json:"created_at"`
+	ProfileImage     string    `json:"profile_image"`
 
 	// Personal & Physical Info
 	BirthDate *time.Time `json:"birth_date"`
@@ -51,10 +52,11 @@ type Athlete struct {
 // CreateAthleteRequest for registration
 type CreateAthleteRequest struct {
 	// Basic Info
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Email     string `json:"email"`
-	Phone     string `json:"phone"`
+	FirstName    string `json:"first_name"`
+	LastName     string `json:"last_name"`
+	Email        string `json:"email"`
+	Phone        string `json:"phone"`
+	ProfileImage string `json:"profile_image"`
 
 	// Personal Info
 	BirthDate string  `json:"birth_date"` // Format: YYYY-MM-DD

@@ -177,7 +177,9 @@ const Documents = () => {
     };
 
     const handleDownload = (id) => {
-        window.open(documentAPI.download(id), '_blank');
+        const token = localStorage.getItem('token');
+        const url = `${documentAPI.getDownloadUrl(id)}?token=${token}`;
+        window.open(url, '_blank');
     };
 
     const handlePreview = (doc) => {
@@ -575,19 +577,19 @@ const Documents = () => {
                 <div className="modal-overlay" onClick={() => setPreviewDoc(null)}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3>Aperçu: {previewDoc.file_name}</h3>
+                            <h3>Aperçu: {previewDoc.file_name} <span style={{ fontSize: '0.8em', color: '#667eea' }}>(PROXY)</span></h3>
                             <button className="btn-close" onClick={() => setPreviewDoc(null)}>×</button>
                         </div>
                         <div className="modal-body">
                             {previewDoc.mime_type === 'application/pdf' ? (
                                 <iframe
-                                    src={documentAPI.download(previewDoc.id)}
+                                    src={`http://localhost:8080/api/documents/${previewDoc.id}/download?token=${localStorage.getItem('token')}`}
                                     className="preview-iframe"
                                     title="PDF Preview"
                                 />
                             ) : (
                                 <img
-                                    src={documentAPI.download(previewDoc.id)}
+                                    src={`http://localhost:8080/api/documents/${previewDoc.id}/download?token=${localStorage.getItem('token')}`}
                                     alt="Preview"
                                     className="preview-image"
                                 />
