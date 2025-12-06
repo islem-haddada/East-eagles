@@ -70,14 +70,11 @@ const Documents = () => {
         }
     };
 
-    // Initial load based on active tab
+    // Initial load
     useEffect(() => {
-        if (activeTab === 'pending') {
-            fetchPendingDocuments();
-        } else if (activeTab === 'archives' && !selectedAthlete) {
-            fetchAthletes();
-        }
-    }, [activeTab, selectedAthlete]);
+        fetchPendingDocuments();
+        fetchAthletes();
+    }, []);
 
     // Handle tab change
     const handleTabChange = (tab) => {
@@ -97,7 +94,6 @@ const Documents = () => {
     const handleBackToArchives = () => {
         setSelectedAthlete(null);
         setAthleteDocuments([]);
-        fetchAthletes();
     };
 
     const handleValidate = async (id) => {
@@ -185,6 +181,13 @@ const Documents = () => {
         return doc.validation_status === filterStatus;
     });
 
+    // Stats
+    const stats = {
+        pending: documents.length,
+        totalAthletes: athletes.length,
+        // Mock compliance for now or calculate if possible
+    };
+
     // Render Document Card
     const renderDocumentCard = (doc, showActions = true) => (
         <div key={doc.id} className="document-card">
@@ -245,6 +248,30 @@ const Documents = () => {
         <div className="documents-page">
             <div className="page-header">
                 <h1>Gestion des Documents</h1>
+
+                <div className="stats-grid">
+                    <div className="stat-card">
+                        <div className="stat-icon">📄</div>
+                        <div className="stat-info">
+                            <h3>Documents en Attente</h3>
+                            <p className="stat-value">{stats.pending}</p>
+                        </div>
+                    </div>
+                    <div className="stat-card">
+                        <div className="stat-icon">👥</div>
+                        <div className="stat-info">
+                            <h3>Total Athlètes</h3>
+                            <p className="stat-value">{stats.totalAthletes}</p>
+                        </div>
+                    </div>
+                    <div className="stat-card">
+                        <div className="stat-icon">📊</div>
+                        <div className="stat-info">
+                            <h3>Taux de Conformité</h3>
+                            <p className="stat-value">--%</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="tabs">
