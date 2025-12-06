@@ -27,6 +27,43 @@ const Documents = () => {
     // Advanced Features State
     const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'approved', 'rejected', 'pending'
     const [previewDoc, setPreviewDoc] = useState(null); // Document to preview
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortOrder, setSortOrder] = useState('name_asc');
+
+    // Upload State
+    const [uploadModalOpen, setUploadModalOpen] = useState(false);
+    const [uploadFile, setUploadFile] = useState(null);
+    const [uploadDocType, setUploadDocType] = useState('medical_certificate');
+    const [uploadNotes, setUploadNotes] = useState('');
+
+    // ... existing code ...
+
+    const handleUpload = async (e) => {
+        e.preventDefault();
+        if (!uploadFile || !selectedAthlete) return;
+
+        const formData = new FormData();
+        formData.append('file', uploadFile);
+        formData.append('athlete_id', selectedAthlete.id);
+        formData.append('document_type', uploadDocType);
+        formData.append('notes', uploadNotes);
+
+        try {
+            setLoading(true);
+            await documentAPI.upload(formData);
+            notify.success('Document ajouté avec succès');
+            setUploadModalOpen(false);
+            setUploadFile(null);
+            setUploadNotes('');
+            // Refresh documents
+            fetchAthleteDocuments(selectedAthlete.id);
+        } catch (error) {
+            console.error("Upload error", error);
+            notify.error("Erreur lors de l'upload");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Fetch pending documents
     const fetchPendingDocuments = async () => {
@@ -82,6 +119,7 @@ const Documents = () => {
         setSelectedAthlete(null);
         setAthleteDocuments([]);
         setFilterStatus('all');
+        setSearchTerm('');
     };
 
     // Handle athlete selection
@@ -181,11 +219,46 @@ const Documents = () => {
         return doc.validation_status === filterStatus;
     });
 
+    // Filter & Sort Athletes
+    const getFilteredAthletes = () => {
+        let filtered = [...athletes];
+
+        // Search
+        if (searchTerm) {
+            const lowerTerm = searchTerm.toLowerCase();
+            filtered = filtered.filter(a =>
+                a.first_name.toLowerCase().includes(lowerTerm) ||
+                a.last_name.toLowerCase().includes(lowerTerm) ||
+                a.email.toLowerCase().includes(lowerTerm)
+            );
+        }
+
+        // Sort
+        filtered.sort((a, b) => {
+            switch (sortOrder) {
+                case 'name_asc':
+                    return a.last_name.localeCompare(b.last_name);
+                case 'name_desc':
+                    return b.last_name.localeCompare(a.last_name);
+                case 'date_newest':
+                    return new Date(b.created_at) - new Date(a.created_at);
+                case 'date_oldest':
+                    return new Date(a.created_at) - new Date(b.created_at);
+                default:
+                    return 0;
+            }
+        });
+
+        return filtered;
+    };
+
+    const filteredAthletes = getFilteredAthletes();
+
     // Stats
     const stats = {
         pending: documents.length,
         totalAthletes: athletes.length,
-        // Mock compliance for now or calculate if possible
+        activeAthletes: athletes.filter(a => a.is_active).length
     };
 
     // Render Document Card
@@ -265,10 +338,10 @@ const Documents = () => {
                         </div>
                     </div>
                     <div className="stat-card">
-                        <div className="stat-icon">📊</div>
+                        <div className="stat-icon">✅</div>
                         <div className="stat-info">
-                            <h3>Taux de Conformité</h3>
-                            <p className="stat-value">--%</p>
+                            <h3>Athlètes Actifs</h3>
+                            <p className="stat-value">{stats.activeAthletes}</p>
                         </div>
                     </div>
                 </div>
@@ -306,37 +379,71 @@ const Documents = () => {
 
             {/* Archives View */}
             {activeTab === 'archives' && !selectedAthlete && (
-                <div className="athletes-grid">
-                    {loading ? (
-                        <div>Chargement...</div>
-                    ) : athletes.length > 0 ? (
-                        athletes.map(athlete => (
-                            <div
-                                key={athlete.id}
-                                className="athlete-folder-card"
-                                onClick={() => handleAthleteClick(athlete)}
-                            >
-                                <span className="folder-icon">📁</span>
-                                <h3>{athlete.first_name} {athlete.last_name}</h3>
-                                <p>{athlete.email}</p>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="empty-state">
-                            <p>Aucun athlète trouvé.</p>
+                <>
+                    {/* Search & Sort Controls */}
+                    <div className="controls-bar">
+                        <div className="search-container">
+                            <span className="search-icon">🔍</span>
+                            <input
+                                type="text"
+                                className="search-input"
+                                placeholder="Rechercher un athlète (nom, email)..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
                         </div>
-                    )}
-                </div>
+                        <select
+                            className="sort-dropdown"
+                            value={sortOrder}
+                            onChange={(e) => setSortOrder(e.target.value)}
+                        >
+                            <option value="name_asc">Nom (A-Z)</option>
+                            <option value="name_desc">Nom (Z-A)</option>
+                            <option value="date_newest">Plus récents</option>
+                            <option value="date_oldest">Plus anciens</option>
+                        </select>
+                    </div>
+
+                    <div className="athletes-grid">
+                        {loading ? (
+                            <div>Chargement...</div>
+                        ) : filteredAthletes.length > 0 ? (
+                            filteredAthletes.map(athlete => (
+                                <div
+                                    key={athlete.id}
+                                    className="athlete-folder-card"
+                                    onClick={() => handleAthleteClick(athlete)}
+                                >
+                                    <span className="folder-icon">📁</span>
+                                    <h3>{athlete.first_name} {athlete.last_name}</h3>
+                                    <p>{athlete.email}</p>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="empty-state">
+                                <p>Aucun athlète trouvé.</p>
+                            </div>
+                        )}
+                    </div>
+                </>
             )}
 
             {/* Selected Athlete Folder View */}
             {activeTab === 'archives' && selectedAthlete && (
                 <div className="athlete-folder-view">
                     <div className="folder-header">
-                        <button onClick={handleBackToArchives} className="btn-back">
-                            ← Retour aux athlètes
+                        <div className="header-left">
+                            <button onClick={handleBackToArchives} className="btn-back">
+                                ← Retour aux athlètes
+                            </button>
+                            <h2>Dossier: {selectedAthlete.first_name} {selectedAthlete.last_name}</h2>
+                        </div>
+                        <button
+                            className="btn-add-doc"
+                            onClick={() => setUploadModalOpen(true)}
+                        >
+                            + Ajouter un document
                         </button>
-                        <h2>Dossier: {selectedAthlete.first_name} {selectedAthlete.last_name}</h2>
                     </div>
 
                     {/* Compliance Section */}
@@ -408,6 +515,57 @@ const Documents = () => {
                                 <p>Aucun document trouvé pour ce filtre.</p>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Upload Modal */}
+            {uploadModalOpen && (
+                <div className="modal-overlay" onClick={() => setUploadModalOpen(false)}>
+                    <div className="modal-content upload-modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>Ajouter un document pour {selectedAthlete.first_name}</h3>
+                            <button className="btn-close" onClick={() => setUploadModalOpen(false)}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <form onSubmit={handleUpload}>
+                                <div className="form-group">
+                                    <label>Type de document</label>
+                                    <select
+                                        value={uploadDocType}
+                                        onChange={(e) => setUploadDocType(e.target.value)}
+                                        required
+                                    >
+                                        {REQUIRED_DOCUMENTS.map(doc => (
+                                            <option key={doc.type} value={doc.type}>{doc.label}</option>
+                                        ))}
+                                        <option value="other">Autre</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Fichier</label>
+                                    <input
+                                        type="file"
+                                        onChange={(e) => setUploadFile(e.target.files[0])}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Notes (Optionnel)</label>
+                                    <textarea
+                                        value={uploadNotes}
+                                        onChange={(e) => setUploadNotes(e.target.value)}
+                                        rows="3"
+                                    />
+                                </div>
+                                <div className="modal-actions">
+                                    <button type="button" className="btn-cancel" onClick={() => setUploadModalOpen(false)}>Annuler</button>
+                                    <button type="submit" className="btn-submit" disabled={!uploadFile || loading}>
+                                        {loading ? 'Envoi...' : 'Ajouter'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}

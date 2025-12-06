@@ -57,12 +57,22 @@ func (r *DocumentRepository) GetByAthlete(athleteID int) ([]*models.Document, er
 	var docs []*models.Document
 	for rows.Next() {
 		d := &models.Document{}
+		var notes, rejectionReason sql.NullString
+
 		if err := rows.Scan(
 			&d.ID, &d.AthleteID, &d.DocumentType, &d.FileName, &d.FilePath, &d.FileURL,
-			&d.ValidationStatus, &d.ExpiryDate, &d.UploadedAt, &d.Notes, &d.RejectionReason,
+			&d.ValidationStatus, &d.ExpiryDate, &d.UploadedAt, &notes, &rejectionReason,
 		); err != nil {
 			return nil, err
 		}
+
+		if notes.Valid {
+			d.Notes = notes.String
+		}
+		if rejectionReason.Valid {
+			d.RejectionReason = rejectionReason.String
+		}
+
 		docs = append(docs, d)
 	}
 	return docs, nil
@@ -86,12 +96,19 @@ func (r *DocumentRepository) GetPending() ([]*models.Document, error) {
 	var docs []*models.Document
 	for rows.Next() {
 		d := &models.Document{}
+		var notes sql.NullString
+
 		if err := rows.Scan(
 			&d.ID, &d.AthleteID, &d.DocumentType, &d.FileName, &d.FilePath, &d.FileURL,
-			&d.ValidationStatus, &d.ExpiryDate, &d.UploadedAt, &d.Notes,
+			&d.ValidationStatus, &d.ExpiryDate, &d.UploadedAt, &notes,
 		); err != nil {
 			return nil, err
 		}
+
+		if notes.Valid {
+			d.Notes = notes.String
+		}
+
 		docs = append(docs, d)
 	}
 	return docs, nil
@@ -106,13 +123,20 @@ func (r *DocumentRepository) GetByID(id int) (*models.Document, error) {
 		FROM documents
 		WHERE id = $1
 	`
+	var notes sql.NullString
+
 	err := r.db.QueryRow(query, id).Scan(
 		&d.ID, &d.AthleteID, &d.DocumentType, &d.FileName, &d.FilePath, &d.FileURL,
-		&d.ValidationStatus, &d.ExpiryDate, &d.UploadedAt, &d.Notes, &d.MimeType,
+		&d.ValidationStatus, &d.ExpiryDate, &d.UploadedAt, &notes, &d.MimeType,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	if notes.Valid {
+		d.Notes = notes.String
+	}
+
 	return d, nil
 }
 
