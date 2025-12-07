@@ -62,12 +62,13 @@ func (s *AuthService) Register(req *models.CreateUserRequest) (*models.User, err
 			Email:     req.Email,
 			// Provide defaults for mandatory fields
 			Phone:                    "Non renseigné",
-			BirthDate:                "2000-01-01", // Default date
+			DateOfBirth:              "2000-01-01", // Default date
 			Gender:                   "other",      // Default gender
 			EmergencyContactName:     "Non renseigné",
 			EmergencyContactPhone:    "Non renseigné",
 			EmergencyContactRelation: "Non renseigné",
 			Address:                  "Non renseigné",
+			SkillLevel:               "beginner", // Default skill level to satisfy CHECK constraint
 		}
 		if _, err := s.athleteRepo.Create(athleteReq); err != nil {
 			// Rollback: Delete the user we just created
@@ -154,7 +155,7 @@ func (s *AuthService) GetCurrentUser(userID int) (map[string]interface{}, error)
 	if user.Role == models.RoleAthlete {
 		athlete, err := s.athleteRepo.GetByEmail(user.Email)
 		if err == nil {
-			response["status"] = athlete.ApprovalStatus
+			response["status"] = athlete.MembershipStatus
 			response["athlete_id"] = athlete.ID
 		} else {
 			response["status"] = "unknown"

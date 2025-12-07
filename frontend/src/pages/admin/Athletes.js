@@ -80,7 +80,7 @@ const Athletes = () => {
 
     const filteredAthletes = athletes.filter(athlete => {
         const matchesSearch = (athlete.first_name + ' ' + athlete.last_name).toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = filter === 'all' || athlete.approval_status === filter;
+        const matchesStatus = filter === 'all' || athlete.membership_status === filter;
         const matchesPayment = paymentFilter === 'all' ||
             (paymentFilter === 'paid' && athlete.payment_valid === true) ||
             (paymentFilter === 'unpaid' && athlete.payment_valid !== true);
@@ -115,10 +115,9 @@ const Athletes = () => {
         try {
             const payload = {
                 ...editForm,
-                weight: editForm.weight ? parseFloat(editForm.weight) : 0,
-                height: editForm.height ? parseFloat(editForm.height) : 0,
-                // Ensure birth_date is in YYYY-MM-DD format if it exists
-                birth_date: editForm.birth_date ? editForm.birth_date.split('T')[0] : ''
+                weight_kg: editForm.weight_kg ? parseFloat(editForm.weight_kg) : 0,
+                // Ensure date_of_birth is in YYYY-MM-DD format if it exists
+                date_of_birth: editForm.date_of_birth ? editForm.date_of_birth.split('T')[0] : ''
             };
             await athleteAPI.update(selectedAthlete.id, payload);
             notify.success('Profil mis à jour avec succès');
@@ -178,12 +177,16 @@ const Athletes = () => {
                                 <td>{athlete.first_name} {athlete.last_name}</td>
                                 <td>{athlete.email}</td>
                                 <td>{athlete.phone || '-'}</td>
-                                <td>{athlete.birth_date ? new Date(athlete.birth_date).toLocaleDateString() : '-'}</td>
                                 <td>
-                                    <span className={`status-badge ${athlete.approval_status}`}>
-                                        {athlete.approval_status === 'approved' ? 'Approuvé' :
-                                            athlete.approval_status === 'pending' ? 'En attente' :
-                                                athlete.approval_status === 'rejected' ? 'Rejeté' : athlete.approval_status}
+                                    {athlete.date_of_birth && !athlete.date_of_birth.startsWith('0001')
+                                        ? new Date(athlete.date_of_birth).toLocaleDateString()
+                                        : '-'}
+                                </td>
+                                <td>
+                                    <span className={`status-badge ${athlete.membership_status}`}>
+                                        {athlete.membership_status === 'approved' ? 'Approuvé' :
+                                            athlete.membership_status === 'pending' ? 'En attente' :
+                                                athlete.membership_status === 'rejected' ? 'Rejeté' : athlete.membership_status}
                                     </span>
                                 </td>
                                 <td>
@@ -210,7 +213,7 @@ const Athletes = () => {
                                 <td>
                                     <div className="action-buttons">
                                         <button onClick={() => handleViewDetails(athlete)} className="btn-view" title="Voir Détails">👁️</button>
-                                        {athlete.approval_status === 'pending' && (
+                                        {athlete.membership_status === 'pending' && (
                                             <>
                                                 <button onClick={() => handleApprove(athlete.id)} className="btn-approve" title="Approuver">✓</button>
                                                 <button onClick={() => handleReject(athlete.id)} className="btn-reject" title="Rejeter">✗</button>
@@ -248,8 +251,8 @@ const Athletes = () => {
                         <div className="modal-body">
                             <div className="profile-header-section">
                                 <div className="profile-image-container">
-                                    {selectedAthlete.profile_image ? (
-                                        <img src={selectedAthlete.profile_image} alt="Profile" className="profile-image" />
+                                    {selectedAthlete.photo_url ? (
+                                        <img src={selectedAthlete.photo_url} alt="Profile" className="profile-image" />
                                     ) : (
                                         <div className="profile-initials">
                                             {selectedAthlete.first_name[0]}{selectedAthlete.last_name[0]}
@@ -259,8 +262,8 @@ const Athletes = () => {
                                 <div className="profile-summary">
                                     <h3>{selectedAthlete.first_name} {selectedAthlete.last_name}</h3>
                                     <p className="email">{selectedAthlete.email}</p>
-                                    <span className={`status-badge ${selectedAthlete.approval_status}`}>
-                                        {selectedAthlete.approval_status}
+                                    <span className={`status-badge ${selectedAthlete.membership_status}`}>
+                                        {selectedAthlete.membership_status}
                                     </span>
                                 </div>
                             </div>
@@ -271,9 +274,13 @@ const Athletes = () => {
                                     <div className="info-row">
                                         <span className="label">Date de Naissance:</span>
                                         {isEditing ? (
-                                            <input type="date" name="birth_date" value={editForm.birth_date ? editForm.birth_date.split('T')[0] : ''} onChange={handleEditChange} className="edit-input" />
+                                            <input type="date" name="date_of_birth" value={editForm.date_of_birth ? editForm.date_of_birth.split('T')[0] : ''} onChange={handleEditChange} className="edit-input" />
                                         ) : (
-                                            <span className="value">{selectedAthlete.birth_date ? new Date(selectedAthlete.birth_date).toLocaleDateString() : '-'}</span>
+                                            <span className="value">
+                                                {selectedAthlete.date_of_birth && !selectedAthlete.date_of_birth.startsWith('0001')
+                                                    ? new Date(selectedAthlete.date_of_birth).toLocaleDateString()
+                                                    : '-'}
+                                            </span>
                                         )}
                                     </div>
                                     <div className="info-row">
@@ -311,17 +318,17 @@ const Athletes = () => {
                                     <div className="info-row">
                                         <span className="label">Poids (kg):</span>
                                         {isEditing ? (
-                                            <input type="number" name="weight" value={editForm.weight || ''} onChange={handleEditChange} className="edit-input" />
+                                            <input type="number" name="weight_kg" value={editForm.weight_kg || ''} onChange={handleEditChange} className="edit-input" />
                                         ) : (
-                                            <span className="value">{selectedAthlete.weight ? `${selectedAthlete.weight} kg` : '-'}</span>
+                                            <span className="value">{selectedAthlete.weight_kg ? `${selectedAthlete.weight_kg} kg` : '-'}</span>
                                         )}
                                     </div>
                                     <div className="info-row">
-                                        <span className="label">Taille (cm):</span>
+                                        <span className="label">Catégorie:</span>
                                         {isEditing ? (
-                                            <input type="number" name="height" value={editForm.height || ''} onChange={handleEditChange} className="edit-input" />
+                                            <input type="text" name="weight_category" value={editForm.weight_category || ''} onChange={handleEditChange} className="edit-input" />
                                         ) : (
-                                            <span className="value">{selectedAthlete.height ? `${selectedAthlete.height} cm` : '-'}</span>
+                                            <span className="value">{selectedAthlete.weight_category || '-'}</span>
                                         )}
                                     </div>
                                     <div className="info-row">

@@ -320,18 +320,13 @@ func (h *AthleteHandler) UploadProfileImage(w http.ResponseWriter, r *http.Reque
 
 	// Prepare nullable fields safely
 	var birthDateStr string
-	if athlete.BirthDate != nil {
-		birthDateStr = athlete.BirthDate.Format("2006-01-02")
+	if athlete.DateOfBirth != nil {
+		birthDateStr = athlete.DateOfBirth.Format("2006-01-02")
 	}
 
 	var weight float64
-	if athlete.Weight != nil {
-		weight = *athlete.Weight
-	}
-
-	var height float64
-	if athlete.Height != nil {
-		height = *athlete.Height
+	if athlete.WeightKG != nil {
+		weight = *athlete.WeightKG
 	}
 
 	// Create request from existing athlete data
@@ -340,21 +335,24 @@ func (h *AthleteHandler) UploadProfileImage(w http.ResponseWriter, r *http.Reque
 		LastName:                 athlete.LastName,
 		Email:                    athlete.Email,
 		Phone:                    athlete.Phone,
-		BirthDate:                birthDateStr,
-		Weight:                   weight,
-		Height:                   height,
+		DateOfBirth:              birthDateStr,
+		WeightKG:                 weight,
 		Gender:                   athlete.Gender,
+		Nationality:              athlete.Nationality,
 		Address:                  athlete.Address,
+		City:                     athlete.City,
+		PostalCode:               athlete.PostalCode,
 		BeltLevel:                athlete.BeltLevel,
-		ExperienceYears:          athlete.ExperienceYears,
-		PreviousMartialArts:      athlete.PreviousMartialArts,
+		SkillLevel:               athlete.SkillLevel,
+		YearsOfExperience:        athlete.YearsOfExperience,
+		WeightCategory:           athlete.WeightCategory,
 		EmergencyContactName:     athlete.EmergencyContactName,
 		EmergencyContactPhone:    athlete.EmergencyContactPhone,
 		EmergencyContactRelation: athlete.EmergencyContactRelation,
 		MedicalConditions:        athlete.MedicalConditions,
 		Allergies:                athlete.Allergies,
 		BloodType:                athlete.BloodType,
-		ProfileImage:             imageURL, // The new image
+		PhotoURL:                 imageURL, // The new image
 	}
 
 	updatedAthlete, err := h.repo.Update(athlete.ID, req)

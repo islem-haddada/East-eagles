@@ -9,35 +9,36 @@ type Athlete struct {
 	LastName         string    `json:"last_name"`
 	Email            string    `json:"email"`
 	Phone            string    `json:"phone"`
-	StudentID        string    `json:"student_id"`
-	FieldOfStudy     string    `json:"field_of_study"` // Kept for backwards compatibility
+	Address          string    `json:"address"`
+	City             string    `json:"city"`
+	PostalCode       string    `json:"postal_code"`
 	RegistrationDate time.Time `json:"registration_date"`
 	IsActive         bool      `json:"is_active"`
 	CreatedAt        time.Time `json:"created_at"`
-	ProfileImage     string    `json:"profile_image"`
+	PhotoURL         string    `json:"photo_url"` // Was ProfileImage
 
 	// Personal & Physical Info
-	BirthDate *time.Time `json:"birth_date"`
-	Weight    *float64   `json:"weight"` // kg
-	Height    *float64   `json:"height"` // cm
-	Gender    string     `json:"gender"`
-	Address   string     `json:"address"`
+	DateOfBirth *time.Time `json:"date_of_birth"` // Was BirthDate
+	Gender      string     `json:"gender"`
+	Nationality string     `json:"nationality"`
+	WeightKG    *float64   `json:"weight_kg"` // Was Weight
 
-	// Sport-Specific Info
-	BeltLevel           string `json:"belt_level"`
-	ExperienceYears     int    `json:"experience_years"`
-	PreviousMartialArts string `json:"previous_martial_arts"`
+	// Sanda Sport Specific
+	WeightCategory    string `json:"weight_category"`
+	BeltLevel         string `json:"belt_level"`
+	SkillLevel        string `json:"skill_level"`
+	YearsOfExperience int    `json:"years_of_experience"` // Was ExperienceYears
 
 	// Emergency Contact
 	EmergencyContactName     string `json:"emergency_contact_name"`
 	EmergencyContactPhone    string `json:"emergency_contact_phone"`
 	EmergencyContactRelation string `json:"emergency_contact_relation"`
 
-	// Approval Workflow
-	ApprovalStatus  string     `json:"approval_status"` // 'pending', 'approved', 'rejected'
-	ApprovedBy      *int       `json:"approved_by"`
-	ApprovedAt      *time.Time `json:"approved_at"`
-	RejectionReason string     `json:"rejection_reason"`
+	// Membership & Approval
+	MembershipStatus string     `json:"membership_status"` // Was ApprovalStatus ('pending', 'approved', 'rejected', 'suspended', 'expired')
+	ApprovedBy       *int       `json:"approved_by"`
+	ApprovedAt       *time.Time `json:"approved_at"`
+	RejectionReason  string     `json:"rejection_reason"`
 
 	// Medical Info
 	MedicalConditions string `json:"medical_conditions"`
@@ -45,30 +46,35 @@ type Athlete struct {
 	BloodType         string `json:"blood_type"`
 
 	// Payment Status (computed from payments table)
-	PaymentEndDate *string `json:"payment_end_date,omitempty"` // Last payment end date
-	PaymentValid   *bool   `json:"payment_valid,omitempty"`    // Whether payment is currently valid
+	PaymentEndDate *string `json:"payment_end_date,omitempty"`
+	PaymentValid   *bool   `json:"payment_valid,omitempty"`
 }
 
 // CreateAthleteRequest for registration
 type CreateAthleteRequest struct {
 	// Basic Info
-	FirstName    string `json:"first_name"`
-	LastName     string `json:"last_name"`
-	Email        string `json:"email"`
-	Phone        string `json:"phone"`
-	ProfileImage string `json:"profile_image"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Email     string `json:"email"`
+	Phone     string `json:"phone"`
+	PhotoURL  string `json:"photo_url"`
 
 	// Personal Info
-	BirthDate string  `json:"birth_date"` // Format: YYYY-MM-DD
-	Weight    float64 `json:"weight"`
-	Height    float64 `json:"height"`
-	Gender    string  `json:"gender"`
-	Address   string  `json:"address"`
+	DateOfBirth string `json:"date_of_birth"` // Format: YYYY-MM-DD
+	Gender      string `json:"gender"`
+	Nationality string `json:"nationality"`
+	Address     string `json:"address"`
+	City        string `json:"city"`
+	PostalCode  string `json:"postal_code"`
+
+	// Physical Info
+	WeightKG float64 `json:"weight_kg"`
 
 	// Sport Info
-	BeltLevel           string `json:"belt_level"`
-	ExperienceYears     int    `json:"experience_years"`
-	PreviousMartialArts string `json:"previous_martial_arts"`
+	WeightCategory    string `json:"weight_category"`
+	BeltLevel         string `json:"belt_level"`
+	SkillLevel        string `json:"skill_level"`
+	YearsOfExperience int    `json:"years_of_experience"`
 
 	// Emergency Contact
 	EmergencyContactName     string `json:"emergency_contact_name"`

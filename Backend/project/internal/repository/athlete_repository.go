@@ -17,13 +17,14 @@ func NewAthleteRepository(db *sql.DB) *AthleteRepository {
 // GetAll returns all athletes with payment status
 func (r *AthleteRepository) GetAll() ([]models.Athlete, error) {
 	query := `
-		SELECT a.id, a.first_name, a.last_name, a.email, a.phone, COALESCE(a.student_id, ''), 
-		       COALESCE(a.field_of_study, ''), a.registration_date, a.is_active, a.created_at,
-		       a.birth_date, a.weight, a.height, a.gender, a.address,
-		       a.belt_level, a.experience_years, a.previous_martial_arts,
+		SELECT a.id, a.first_name, a.last_name, a.email, a.phone, 
+		       a.address, a.city, a.postal_code,
+		       a.registration_date, a.is_active, a.created_at,
+		       a.date_of_birth, a.gender, a.nationality,
+		       a.weight_kg, a.weight_category, a.belt_level, a.skill_level, a.years_of_experience,
 		       a.emergency_contact_name, a.emergency_contact_phone, a.emergency_contact_relation,
-		       a.approval_status, a.approved_by, a.approved_at, COALESCE(a.rejection_reason, ''),
-		       COALESCE(a.medical_conditions, ''), COALESCE(a.allergies, ''), COALESCE(a.blood_type, ''), COALESCE(a.profile_image, ''),
+		       a.membership_status, a.approved_by, a.approved_at, COALESCE(a.rejection_reason, ''),
+		       COALESCE(a.medical_conditions, ''), COALESCE(a.allergies, ''), COALESCE(a.blood_type, ''), COALESCE(a.photo_url, ''),
 		       p.end_date AS payment_end_date,
 		       CASE 
 		           WHEN p.end_date IS NULL THEN false
@@ -55,13 +56,13 @@ func (r *AthleteRepository) GetAll() ([]models.Athlete, error) {
 
 		err := rows.Scan(
 			&a.ID, &a.FirstName, &a.LastName, &a.Email, &a.Phone,
-			&a.StudentID, &a.FieldOfStudy, &a.RegistrationDate,
-			&a.IsActive, &a.CreatedAt,
-			&a.BirthDate, &a.Weight, &a.Height, &a.Gender, &a.Address,
-			&a.BeltLevel, &a.ExperienceYears, &a.PreviousMartialArts,
+			&a.Address, &a.City, &a.PostalCode,
+			&a.RegistrationDate, &a.IsActive, &a.CreatedAt,
+			&a.DateOfBirth, &a.Gender, &a.Nationality,
+			&a.WeightKG, &a.WeightCategory, &a.BeltLevel, &a.SkillLevel, &a.YearsOfExperience,
 			&a.EmergencyContactName, &a.EmergencyContactPhone, &a.EmergencyContactRelation,
-			&a.ApprovalStatus, &a.ApprovedBy, &a.ApprovedAt, &a.RejectionReason,
-			&a.MedicalConditions, &a.Allergies, &a.BloodType, &a.ProfileImage,
+			&a.MembershipStatus, &a.ApprovedBy, &a.ApprovedAt, &a.RejectionReason,
+			&a.MedicalConditions, &a.Allergies, &a.BloodType, &a.PhotoURL,
 			&paymentEndDate, &paymentValid,
 		)
 		if err != nil {
@@ -85,15 +86,16 @@ func (r *AthleteRepository) GetAll() ([]models.Athlete, error) {
 // GetPending returns athletes pending approval
 func (r *AthleteRepository) GetPending() ([]models.Athlete, error) {
 	query := `
-		SELECT id, first_name, last_name, email, phone, COALESCE(student_id, ''), 
-		       COALESCE(field_of_study, ''), registration_date, is_active, created_at,
-		       birth_date, weight, height, gender, address,
-		       belt_level, experience_years, previous_martial_arts,
+		SELECT id, first_name, last_name, email, phone, 
+		       address, city, postal_code,
+		       registration_date, is_active, created_at,
+		       date_of_birth, gender, nationality,
+		       weight_kg, weight_category, belt_level, skill_level, years_of_experience,
 		       emergency_contact_name, emergency_contact_phone, emergency_contact_relation,
-		       approval_status, approved_by, approved_at, COALESCE(rejection_reason, ''),
-		       COALESCE(medical_conditions, ''), COALESCE(allergies, ''), COALESCE(blood_type, ''), COALESCE(profile_image, '')
+		       membership_status, approved_by, approved_at, COALESCE(rejection_reason, ''),
+		       COALESCE(medical_conditions, ''), COALESCE(allergies, ''), COALESCE(blood_type, ''), COALESCE(photo_url, '')
 		FROM athletes
-		WHERE approval_status = 'pending'
+		WHERE membership_status = 'pending'
 		ORDER BY created_at ASC
 	`
 
@@ -108,13 +110,13 @@ func (r *AthleteRepository) GetPending() ([]models.Athlete, error) {
 		var a models.Athlete
 		err := rows.Scan(
 			&a.ID, &a.FirstName, &a.LastName, &a.Email, &a.Phone,
-			&a.StudentID, &a.FieldOfStudy, &a.RegistrationDate,
-			&a.IsActive, &a.CreatedAt,
-			&a.BirthDate, &a.Weight, &a.Height, &a.Gender, &a.Address,
-			&a.BeltLevel, &a.ExperienceYears, &a.PreviousMartialArts,
+			&a.Address, &a.City, &a.PostalCode,
+			&a.RegistrationDate, &a.IsActive, &a.CreatedAt,
+			&a.DateOfBirth, &a.Gender, &a.Nationality,
+			&a.WeightKG, &a.WeightCategory, &a.BeltLevel, &a.SkillLevel, &a.YearsOfExperience,
 			&a.EmergencyContactName, &a.EmergencyContactPhone, &a.EmergencyContactRelation,
-			&a.ApprovalStatus, &a.ApprovedBy, &a.ApprovedAt, &a.RejectionReason,
-			&a.MedicalConditions, &a.Allergies, &a.BloodType, &a.ProfileImage,
+			&a.MembershipStatus, &a.ApprovedBy, &a.ApprovedAt, &a.RejectionReason,
+			&a.MedicalConditions, &a.Allergies, &a.BloodType, &a.PhotoURL,
 		)
 		if err != nil {
 			return nil, err
@@ -128,26 +130,27 @@ func (r *AthleteRepository) GetPending() ([]models.Athlete, error) {
 // GetByID returns athlete by ID
 func (r *AthleteRepository) GetByID(id int) (*models.Athlete, error) {
 	query := `
-		SELECT id, first_name, last_name, email, phone, COALESCE(student_id, ''),
-		       COALESCE(field_of_study, ''), registration_date, is_active, created_at,
-		       birth_date, weight, height, gender, address,
-		       belt_level, experience_years, previous_martial_arts,
+		SELECT id, first_name, last_name, email, phone, 
+		       address, city, postal_code,
+		       registration_date, is_active, created_at,
+		       date_of_birth, gender, nationality,
+		       weight_kg, weight_category, belt_level, skill_level, years_of_experience,
 		       emergency_contact_name, emergency_contact_phone, emergency_contact_relation,
-		       approval_status, approved_by, approved_at, COALESCE(rejection_reason, ''),
-		       COALESCE(medical_conditions, ''), COALESCE(allergies, ''), COALESCE(blood_type, ''), COALESCE(profile_image, '')
+		       membership_status, approved_by, approved_at, COALESCE(rejection_reason, ''),
+		       COALESCE(medical_conditions, ''), COALESCE(allergies, ''), COALESCE(blood_type, ''), COALESCE(photo_url, '')
 		FROM athletes WHERE id = $1
 	`
 
 	var a models.Athlete
 	err := r.db.QueryRow(query, id).Scan(
 		&a.ID, &a.FirstName, &a.LastName, &a.Email, &a.Phone,
-		&a.StudentID, &a.FieldOfStudy, &a.RegistrationDate,
-		&a.IsActive, &a.CreatedAt,
-		&a.BirthDate, &a.Weight, &a.Height, &a.Gender, &a.Address,
-		&a.BeltLevel, &a.ExperienceYears, &a.PreviousMartialArts,
+		&a.Address, &a.City, &a.PostalCode,
+		&a.RegistrationDate, &a.IsActive, &a.CreatedAt,
+		&a.DateOfBirth, &a.Gender, &a.Nationality,
+		&a.WeightKG, &a.WeightCategory, &a.BeltLevel, &a.SkillLevel, &a.YearsOfExperience,
 		&a.EmergencyContactName, &a.EmergencyContactPhone, &a.EmergencyContactRelation,
-		&a.ApprovalStatus, &a.ApprovedBy, &a.ApprovedAt, &a.RejectionReason,
-		&a.MedicalConditions, &a.Allergies, &a.BloodType, &a.ProfileImage,
+		&a.MembershipStatus, &a.ApprovedBy, &a.ApprovedAt, &a.RejectionReason,
+		&a.MedicalConditions, &a.Allergies, &a.BloodType, &a.PhotoURL,
 	)
 
 	if err != nil {
@@ -160,26 +163,27 @@ func (r *AthleteRepository) GetByID(id int) (*models.Athlete, error) {
 // GetByEmail returns athlete by email
 func (r *AthleteRepository) GetByEmail(email string) (*models.Athlete, error) {
 	query := `
-		SELECT id, first_name, last_name, email, phone, COALESCE(student_id, ''),
-		       COALESCE(field_of_study, ''), registration_date, is_active, created_at,
-		       birth_date, weight, height, gender, address,
-		       belt_level, experience_years, previous_martial_arts,
+		SELECT id, first_name, last_name, email, phone, 
+		       address, city, postal_code,
+		       registration_date, is_active, created_at,
+		       date_of_birth, gender, nationality,
+		       weight_kg, weight_category, belt_level, skill_level, years_of_experience,
 		       emergency_contact_name, emergency_contact_phone, emergency_contact_relation,
-		       approval_status, approved_by, approved_at, COALESCE(rejection_reason, ''),
-		       COALESCE(medical_conditions, ''), COALESCE(allergies, ''), COALESCE(blood_type, ''), COALESCE(profile_image, '')
+		       membership_status, approved_by, approved_at, COALESCE(rejection_reason, ''),
+		       COALESCE(medical_conditions, ''), COALESCE(allergies, ''), COALESCE(blood_type, ''), COALESCE(photo_url, '')
 		FROM athletes WHERE email = $1
 	`
 
 	var a models.Athlete
 	err := r.db.QueryRow(query, email).Scan(
 		&a.ID, &a.FirstName, &a.LastName, &a.Email, &a.Phone,
-		&a.StudentID, &a.FieldOfStudy, &a.RegistrationDate,
-		&a.IsActive, &a.CreatedAt,
-		&a.BirthDate, &a.Weight, &a.Height, &a.Gender, &a.Address,
-		&a.BeltLevel, &a.ExperienceYears, &a.PreviousMartialArts,
+		&a.Address, &a.City, &a.PostalCode,
+		&a.RegistrationDate, &a.IsActive, &a.CreatedAt,
+		&a.DateOfBirth, &a.Gender, &a.Nationality,
+		&a.WeightKG, &a.WeightCategory, &a.BeltLevel, &a.SkillLevel, &a.YearsOfExperience,
 		&a.EmergencyContactName, &a.EmergencyContactPhone, &a.EmergencyContactRelation,
-		&a.ApprovalStatus, &a.ApprovedBy, &a.ApprovedAt, &a.RejectionReason,
-		&a.MedicalConditions, &a.Allergies, &a.BloodType, &a.ProfileImage,
+		&a.MembershipStatus, &a.ApprovedBy, &a.ApprovedAt, &a.RejectionReason,
+		&a.MedicalConditions, &a.Allergies, &a.BloodType, &a.PhotoURL,
 	)
 
 	if err != nil {
@@ -194,30 +198,34 @@ func (r *AthleteRepository) Create(req *models.CreateAthleteRequest) (*models.At
 	query := `
 		INSERT INTO athletes (
 			first_name, last_name, email, phone,
-			birth_date, weight, height, gender, address,
-			belt_level, experience_years, previous_martial_arts,
+			address, city, postal_code,
+			date_of_birth, gender, nationality,
+			weight_kg, weight_category, belt_level, skill_level, years_of_experience,
 			emergency_contact_name, emergency_contact_phone, emergency_contact_relation,
 			medical_conditions, allergies, blood_type,
-			approval_status, student_id, field_of_study, profile_image
+			membership_status, photo_url
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'pending', '', '', '')
-		RETURNING id, first_name, last_name, email, phone, COALESCE(student_id, ''),
-		          COALESCE(field_of_study, ''), registration_date, is_active, created_at,
-		          approval_status, COALESCE(profile_image, '')
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, 'pending', $22)
+		RETURNING id, first_name, last_name, email, phone, 
+		          address, city, postal_code,
+		          registration_date, is_active, created_at,
+		          membership_status, COALESCE(photo_url, '')
 	`
 
 	var a models.Athlete
 	err := r.db.QueryRow(
 		query,
 		req.FirstName, req.LastName, req.Email, req.Phone,
-		req.BirthDate, req.Weight, req.Height, req.Gender, req.Address,
-		req.BeltLevel, req.ExperienceYears, req.PreviousMartialArts,
+		req.Address, req.City, req.PostalCode,
+		req.DateOfBirth, req.Gender, req.Nationality,
+		req.WeightKG, req.WeightCategory, req.BeltLevel, req.SkillLevel, req.YearsOfExperience,
 		req.EmergencyContactName, req.EmergencyContactPhone, req.EmergencyContactRelation,
 		req.MedicalConditions, req.Allergies, req.BloodType,
+		req.PhotoURL,
 	).Scan(
 		&a.ID, &a.FirstName, &a.LastName, &a.Email, &a.Phone,
-		&a.StudentID, &a.FieldOfStudy, &a.RegistrationDate,
-		&a.IsActive, &a.CreatedAt, &a.ApprovalStatus, &a.ProfileImage,
+		&a.Address, &a.City, &a.PostalCode,
+		&a.RegistrationDate, &a.IsActive, &a.CreatedAt, &a.MembershipStatus, &a.PhotoURL,
 	)
 
 	if err != nil {
@@ -231,7 +239,7 @@ func (r *AthleteRepository) Create(req *models.CreateAthleteRequest) (*models.At
 func (r *AthleteRepository) Approve(athleteID int, adminID int) error {
 	query := `
 		UPDATE athletes
-		SET approval_status = 'approved',
+		SET membership_status = 'approved',
 		    approved_by = $1,
 		    approved_at = NOW()
 		WHERE id = $2
@@ -258,7 +266,7 @@ func (r *AthleteRepository) Approve(athleteID int, adminID int) error {
 func (r *AthleteRepository) Reject(athleteID int, adminID int, reason string) error {
 	query := `
 		UPDATE athletes
-		SET approval_status = 'rejected',
+		SET membership_status = 'rejected',
 		    approved_by = $1,
 		    approved_at = NOW(),
 		    rejection_reason = $2
@@ -307,42 +315,45 @@ func (r *AthleteRepository) Update(id int, req *models.CreateAthleteRequest) (*m
 	query := `
 		UPDATE athletes
 		SET first_name = $1, last_name = $2, email = $3, phone = $4,
-		    birth_date = NULLIF($5, '')::date, weight = $6, height = $7, 
-		    gender = COALESCE(NULLIF($8, ''), gender), -- Keep existing if empty, avoids CHECK violation
-		    address = $9,
-		    belt_level = $10, experience_years = $11, previous_martial_arts = $12,
-		    emergency_contact_name = $13, emergency_contact_phone = $14, emergency_contact_relation = $15,
-		    medical_conditions = NULLIF($16, ''), allergies = NULLIF($17, ''), blood_type = NULLIF($18, ''),
-		    student_id = '', field_of_study = '',
-		    profile_image = COALESCE(NULLIF($20, ''), profile_image) -- Only update if not empty
-		WHERE id = $19
-		RETURNING id, first_name, last_name, email, phone, COALESCE(student_id, ''),
-		          COALESCE(field_of_study, ''), registration_date, is_active, created_at,
-		          birth_date, weight, height, gender, address,
-		          belt_level, experience_years, previous_martial_arts,
+		    address = $5, city = $6, postal_code = $7,
+		    date_of_birth = NULLIF($8, '')::date, 
+		    gender = COALESCE(NULLIF($9, ''), gender),
+		    nationality = $10,
+		    weight_kg = $11, weight_category = $12,
+		    belt_level = $13, skill_level = $14, years_of_experience = $15,
+		    emergency_contact_name = $16, emergency_contact_phone = $17, emergency_contact_relation = $18,
+		    medical_conditions = NULLIF($19, ''), allergies = NULLIF($20, ''), blood_type = NULLIF($21, ''),
+		    photo_url = COALESCE(NULLIF($23, ''), photo_url)
+		WHERE id = $22
+		RETURNING id, first_name, last_name, email, phone, 
+		          address, city, postal_code,
+		          registration_date, is_active, created_at,
+		          date_of_birth, gender, nationality,
+		          weight_kg, weight_category, belt_level, skill_level, years_of_experience,
 		          emergency_contact_name, emergency_contact_phone, emergency_contact_relation,
-		          approval_status, approved_by, approved_at, COALESCE(rejection_reason, ''),
-		          COALESCE(medical_conditions, ''), COALESCE(allergies, ''), COALESCE(blood_type, ''), COALESCE(profile_image, '')
+		          membership_status, approved_by, approved_at, COALESCE(rejection_reason, ''),
+		          COALESCE(medical_conditions, ''), COALESCE(allergies, ''), COALESCE(blood_type, ''), COALESCE(photo_url, '')
 	`
 
 	var a models.Athlete
 	err := r.db.QueryRow(
 		query,
 		req.FirstName, req.LastName, req.Email, req.Phone,
-		req.BirthDate, req.Weight, req.Height, req.Gender, req.Address,
-		req.BeltLevel, req.ExperienceYears, req.PreviousMartialArts,
+		req.Address, req.City, req.PostalCode,
+		req.DateOfBirth, req.Gender, req.Nationality,
+		req.WeightKG, req.WeightCategory, req.BeltLevel, req.SkillLevel, req.YearsOfExperience,
 		req.EmergencyContactName, req.EmergencyContactPhone, req.EmergencyContactRelation,
 		req.MedicalConditions, req.Allergies, req.BloodType,
-		id, req.ProfileImage,
+		id, req.PhotoURL,
 	).Scan(
 		&a.ID, &a.FirstName, &a.LastName, &a.Email, &a.Phone,
-		&a.StudentID, &a.FieldOfStudy, &a.RegistrationDate,
-		&a.IsActive, &a.CreatedAt,
-		&a.BirthDate, &a.Weight, &a.Height, &a.Gender, &a.Address,
-		&a.BeltLevel, &a.ExperienceYears, &a.PreviousMartialArts,
+		&a.Address, &a.City, &a.PostalCode,
+		&a.RegistrationDate, &a.IsActive, &a.CreatedAt,
+		&a.DateOfBirth, &a.Gender, &a.Nationality,
+		&a.WeightKG, &a.WeightCategory, &a.BeltLevel, &a.SkillLevel, &a.YearsOfExperience,
 		&a.EmergencyContactName, &a.EmergencyContactPhone, &a.EmergencyContactRelation,
-		&a.ApprovalStatus, &a.ApprovedBy, &a.ApprovedAt, &a.RejectionReason,
-		&a.MedicalConditions, &a.Allergies, &a.BloodType, &a.ProfileImage,
+		&a.MembershipStatus, &a.ApprovedBy, &a.ApprovedAt, &a.RejectionReason,
+		&a.MedicalConditions, &a.Allergies, &a.BloodType, &a.PhotoURL,
 	)
 
 	if err != nil {
@@ -355,9 +366,10 @@ func (r *AthleteRepository) Update(id int, req *models.CreateAthleteRequest) (*m
 // Search filters athletes by name or email
 func (r *AthleteRepository) Search(query string) ([]models.Athlete, error) {
 	searchQuery := `
-		SELECT id, first_name, last_name, email, phone, COALESCE(student_id, ''),
-		       COALESCE(field_of_study, ''), registration_date, is_active, created_at,
-		       approval_status
+		SELECT id, first_name, last_name, email, phone, 
+		       address, city, postal_code,
+		       registration_date, is_active, created_at,
+		       membership_status
 		FROM athletes
 		WHERE LOWER(first_name) LIKE LOWER($1) 
 		   OR LOWER(last_name) LIKE LOWER($1)
@@ -376,8 +388,8 @@ func (r *AthleteRepository) Search(query string) ([]models.Athlete, error) {
 		var a models.Athlete
 		err := rows.Scan(
 			&a.ID, &a.FirstName, &a.LastName, &a.Email, &a.Phone,
-			&a.StudentID, &a.FieldOfStudy, &a.RegistrationDate,
-			&a.IsActive, &a.CreatedAt, &a.ApprovalStatus,
+			&a.Address, &a.City, &a.PostalCode,
+			&a.RegistrationDate, &a.IsActive, &a.CreatedAt, &a.MembershipStatus,
 		)
 		if err != nil {
 			return nil, err
@@ -393,10 +405,10 @@ func (r *AthleteRepository) GetStats() (*models.AthleteStats, error) {
 	query := `
 		SELECT 
 			COUNT(*) as total,
-			COUNT(CASE WHEN approval_status = 'pending' THEN 1 END) as pending,
-			COUNT(CASE WHEN approval_status = 'approved' THEN 1 END) as approved,
-			COUNT(CASE WHEN approval_status = 'rejected' THEN 1 END) as rejected,
-			COUNT(CASE WHEN is_active = true AND approval_status = 'approved' THEN 1 END) as active
+			COUNT(CASE WHEN membership_status = 'pending' THEN 1 END) as pending,
+			COUNT(CASE WHEN membership_status = 'approved' THEN 1 END) as approved,
+			COUNT(CASE WHEN membership_status = 'rejected' THEN 1 END) as rejected,
+			COUNT(CASE WHEN is_active = true AND membership_status = 'approved' THEN 1 END) as active
 		FROM athletes
 	`
 
