@@ -81,6 +81,14 @@ func main() {
 	// Servir les fichiers statiques (uploads)
 	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
+	// Log all incoming requests for debugging
+	router.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("📥 Incoming request: %s %s", r.Method, r.URL.Path)
+			next.ServeHTTP(w, r)
+		})
+	})
+
 	// Public routes (Must be defined BEFORE the /api subrouter to avoid shadowing)
 	router.HandleFunc("/api/auth/register", authHandler.Register).Methods("POST")
 	router.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST")
@@ -105,6 +113,8 @@ func main() {
 
 	// Athletes Management
 	admin.HandleFunc("/athletes", athleteHandler.GetAll).Methods("GET")
+	admin.HandleFunc("/athletes/pending", athleteHandler.GetPending).Methods("GET")
+	admin.HandleFunc("/athletes/stats", athleteHandler.GetStats).Methods("GET")
 	admin.HandleFunc("/athletes/{id}", athleteHandler.GetByID).Methods("GET")
 	admin.HandleFunc("/athletes/{id}/approve", athleteHandler.Approve).Methods("POST")
 	admin.HandleFunc("/athletes/{id}/reject", athleteHandler.Reject).Methods("POST")

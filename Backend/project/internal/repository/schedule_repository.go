@@ -51,9 +51,16 @@ func (r *ScheduleRepository) Create(req *models.CreateScheduleRequest) (*models.
 	}
 
 	// Format time to HH:MM
-	if len(startTimeStr) >= 5 {
+	// Handle different time formats
+	// PostgreSQL TIME type might return different formats
+	if len(startTimeStr) >= 8 && startTimeStr[2] == ':' && startTimeStr[5] == ':' {
+		// Format is HH:MM:SS, extract HH:MM
+		schedule.StartTime = startTimeStr[:5]
+	} else if len(startTimeStr) >= 5 {
+		// Format is already HH:MM or similar
 		schedule.StartTime = startTimeStr[:5]
 	} else {
+		// Unexpected format, use as-is
 		schedule.StartTime = startTimeStr
 	}
 
@@ -61,21 +68,7 @@ func (r *ScheduleRepository) Create(req *models.CreateScheduleRequest) (*models.
 }
 
 func (r *ScheduleRepository) GetAll() ([]*models.TrainingSchedule, error) {
-	query := `
-		SELECT id, day_of_week, start_time, duration_minutes, title, location, description, created_at
-		FROM training_schedules
-		ORDER BY 
-			CASE 
-				WHEN day_of_week = 'Monday' THEN 1
-				WHEN day_of_week = 'Tuesday' THEN 2
-				WHEN day_of_week = 'Wednesday' THEN 3
-				WHEN day_of_week = 'Thursday' THEN 4
-				WHEN day_of_week = 'Friday' THEN 5
-				WHEN day_of_week = 'Saturday' THEN 6
-				WHEN day_of_week = 'Sunday' THEN 7
-			END,
-			start_time ASC
-	`
+	query := `SELECT id, day_of_week, start_time, duration_minutes, title, location, description, created_at FROM training_schedules ORDER BY day_of_week, start_time`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -85,7 +78,7 @@ func (r *ScheduleRepository) GetAll() ([]*models.TrainingSchedule, error) {
 	var schedules []*models.TrainingSchedule
 	for rows.Next() {
 		s := &models.TrainingSchedule{}
-		var startTimeStr string // Scan time as string or []byte
+		var startTimeStr sql.NullString // Use NullString to handle potential NULL values
 		if err := rows.Scan(
 			&s.ID, &s.DayOfWeek, &startTimeStr, &s.DurationMinutes, &s.Title, &s.Location, &s.Description, &s.CreatedAt,
 		); err != nil {
@@ -93,16 +86,27 @@ func (r *ScheduleRepository) GetAll() ([]*models.TrainingSchedule, error) {
 		}
 
 		// DEBUG: Log what we got from the database
-		log.Printf("🔍 DEBUG GetAll - ID: %d, Raw start_time from DB: '%s', Length: %d", s.ID, startTimeStr, len(startTimeStr))
-
-		// startTimeStr might come as "18:00:00" from DB
-		if len(startTimeStr) >= 5 {
-			s.StartTime = startTimeStr[:5]
-			log.Printf("🔍 DEBUG GetAll - ID: %d, Formatted start_time: '%s'", s.ID, s.StartTime)
+		if startTimeStr.Valid {
+			log.Printf("🔍 DEBUG GetAll - ID: %d, Raw start_time from DB: '%s', Length: %d, Valid: %t", s.ID, startTimeStr.String, len(startTimeStr.String), startTimeStr.Valid)
+			
+			// Handle different time formats
+			// PostgreSQL TIME type might return different formats
+			if len(startTimeStr.String) >= 8 && startTimeStr.String[2] == ':' && startTimeStr.String[5] == ':' {
+				// Format is HH:MM:SS, extract HH:MM
+				s.StartTime = startTimeStr.String[:5]
+			} else if len(startTimeStr.String) >= 5 {
+				// Format is already HH:MM or similar
+				s.StartTime = startTimeStr.String[:5]
+			} else {
+				// Unexpected format, use as-is
+				s.StartTime = startTimeStr.String
+			}
 		} else {
-			s.StartTime = startTimeStr
-			log.Printf("🔍 DEBUG GetAll - ID: %d, Using original start_time (too short): '%s'", s.ID, s.StartTime)
+			log.Printf("🔍 DEBUG GetAll - ID: %d, start_time is NULL", s.ID)
+			s.StartTime = ""
 		}
+		
+		log.Printf("🔍 DEBUG GetAll - ID: %d, Final formatted start_time: '%s'", s.ID, s.StartTime)
 		schedules = append(schedules, s)
 	}
 	return schedules, nil
@@ -152,9 +156,16 @@ func (r *ScheduleRepository) Update(id int, req *models.CreateScheduleRequest) (
 	}
 
 	// Format time to HH:MM
-	if len(startTimeStr) >= 5 {
+	// Handle different time formats
+	// PostgreSQL TIME type might return different formats
+	if len(startTimeStr) >= 8 && startTimeStr[2] == ':' && startTimeStr[5] == ':' {
+		// Format is HH:MM:SS, extract HH:MM
+		schedule.StartTime = startTimeStr[:5]
+	} else if len(startTimeStr) >= 5 {
+		// Format is already HH:MM or similar
 		schedule.StartTime = startTimeStr[:5]
 	} else {
+		// Unexpected format, use as-is
 		schedule.StartTime = startTimeStr
 	}
 

@@ -11,6 +11,7 @@ const Dashboard = () => {
     const [athleteInfo, setAthleteInfo] = useState(null);
     const [subscription, setSubscription] = useState(null);
     const [weeklySchedule, setWeeklySchedule] = useState([]);
+    const [trainingHistory, setTrainingHistory] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -27,6 +28,7 @@ const Dashboard = () => {
                 setUpcomingTrainings(trainingsRes.data?.slice(0, 5) || []);
                 setDocuments(docsRes.data || []);
                 setWeeklySchedule(scheduleRes.data || []);
+                setTrainingHistory(historyRes.data || []);
 
                 // Calculate stats
                 const history = historyRes.data || [];
@@ -82,6 +84,26 @@ const Dashboard = () => {
         return Math.round((value / total) * 100);
     };
 
+    // Calculate attendance trend for the last 5 sessions
+    const calculateAttendanceTrend = () => {
+        if (!trainingHistory || trainingHistory.length === 0) return [];
+        
+        // Sort by date descending and take last 5
+        const sorted = [...trainingHistory].sort((a, b) => 
+            new Date(b.session_date) - new Date(a.session_date)
+        ).slice(0, 5);
+        
+        return sorted.map(session => ({
+            date: new Date(session.session_date).toLocaleDateString('fr-FR', { 
+                day: 'numeric', 
+                month: 'short' 
+            }),
+            attended: session.attended ? 1 : 0
+        })).reverse(); // Reverse to show chronological order
+    };
+
+    const attendanceTrend = calculateAttendanceTrend();
+
     if (loading) return <div className="loading-spinner"><div className="spinner"></div></div>;
 
     const pendingDocs = documents.filter(d => d.validation_status === 'pending').length;
@@ -89,9 +111,26 @@ const Dashboard = () => {
 
     return (
         <div className="athlete-dashboard">
-            <div className="dashboard-header">
-                <h1>👋 Bienvenue, {user.email?.split('@')[0]}</h1>
-                <p className="dashboard-subtitle">Voici un aperçu de votre activité</p>
+            {/* Welcome Section */}
+            <div className="welcome-section">
+                <div className="welcome-content">
+                    <h1>👋 Bonjour, {user.first_name || user.email?.split('@')[0]}</h1>
+                    <p className="welcome-subtitle">Bienvenue sur votre tableau de bord personnel</p>
+                </div>
+                <div className="quick-actions">
+                    <Link to="/athlete/profile" className="action-btn primary">
+                        <span className="action-icon">👤</span>
+                        <span>Mon Profil</span>
+                    </Link>
+                    <Link to="/athlete/trainings" className="action-btn secondary">
+                        <span className="action-icon">🏋️</span>
+                        <span>Mes Entraînements</span>
+                    </Link>
+                    <Link to="/athlete/payments" className="action-btn tertiary">
+                        <span className="action-icon">💳</span>
+                        <span>Mes Paiements</span>
+                    </Link>
+                </div>
             </div>
 
             {athleteInfo?.status === 'pending' && (
@@ -101,73 +140,115 @@ const Dashboard = () => {
                 </div>
             )}
 
-            {/* Main Stats */}
-            <div className="stats-grid">
-                <div className={`stat-card ${subscription?.status === 'active' ? 'success' : 'danger'}`}>
-                    <div className="stat-icon">💳</div>
-                    <div className="stat-content">
-                        <h3>Abonnement</h3>
-                        <div className="stat-value">
-                            {subscription?.status === 'active' ? 'ACTIF' : 'EXPIRÉ'}
+            {/* Quick Stats Overview */}
+            <div className="stats-overview">
+                <h2>📊 Vue d'ensemble</h2>
+                <div className="stats-grid">
+                    <div className={`stat-card ${subscription?.status === 'active' ? 'success' : 'danger'}`}>
+                        <div className="stat-icon">💳</div>
+                        <div className="stat-content">
+                            <h3>Abonnement</h3>
+                            <div className="stat-value">
+                                {subscription?.status === 'active' ? 'ACTIF' : 'EXPIRÉ'}
+                            </div>
+                            {subscription?.expiryDate && (
+                                <p className="stat-label">
+                                    {subscription.daysLeft > 0
+                                        ? `${subscription.daysLeft} jours restants`
+                                        : `Expiré depuis ${Math.abs(subscription.daysLeft)} jours`}
+                                </p>
+                            )}
                         </div>
-                        {subscription?.expiryDate && (
-                            <p className="stat-label">
-                                {subscription.daysLeft > 0
-                                    ? `${subscription.daysLeft} jours restants`
-                                    : `Expiré depuis ${Math.abs(subscription.daysLeft)} jours`}
-                            </p>
-                        )}
+                        <div className={`status-badge ${subscription?.status}`}>
+                            {subscription?.status === 'active' ? '✓' : '✗'}
+                        </div>
                     </div>
-                    <div className={`status-badge ${subscription?.status}`}>
-                        {subscription?.status === 'active' ? '✓' : '✗'}
-                    </div>
-                </div>
 
-                <div className="stat-card primary">
-                    <div className="stat-icon">🏋️</div>
-                    <div className="stat-content">
-                        <h3>Séances Suivies</h3>
-                        <div className="stat-value">{athleteInfo?.stats?.attended || 0}</div>
-                        <p className="stat-label">Sur {athleteInfo?.stats?.total || 0} total</p>
+                    <div className="stat-card primary">
+                        <div className="stat-icon">🏋️</div>
+                        <div className="stat-content">
+                            <h3>Séances Suivies</h3>
+                            <div className="stat-value">{athleteInfo?.stats?.attended || 0}</div>
+                            <p className="stat-label">Sur {athleteInfo?.stats?.total || 0} total</p>
+                        </div>
+                        <div className="progress-ring">
+                            <svg width="60" height="60">
+                                <circle cx="30" cy="30" r="25" fill="none" stroke="#e5e7eb" strokeWidth="5"></circle>
+                                <circle
+                                    cx="30" cy="30" r="25"
+                                    fill="none"
+                                    stroke="#3b82f6"
+                                    strokeWidth="5"
+                                    strokeDasharray={`${(safePercentage(athleteInfo?.stats?.attended, athleteInfo?.stats?.total) / 100) * 157} 157`}
+                                    strokeLinecap="round"
+                                    transform="rotate(-90 30 30)"
+                                ></circle>
+                            </svg>
+                            <span className="progress-label">
+                                {safePercentage(athleteInfo?.stats?.attended, athleteInfo?.stats?.total)}%
+                            </span>
+                        </div>
                     </div>
-                    <div className="progress-ring">
-                        <svg width="60" height="60">
-                            <circle cx="30" cy="30" r="25" fill="none" stroke="#e5e7eb" strokeWidth="5"></circle>
-                            <circle
-                                cx="30" cy="30" r="25"
-                                fill="none"
-                                stroke="#3b82f6"
-                                strokeWidth="5"
-                                strokeDasharray={`${(safePercentage(athleteInfo?.stats?.attended, athleteInfo?.stats?.total) / 100) * 157} 157`}
-                                strokeLinecap="round"
-                                transform="rotate(-90 30 30)"
-                            ></circle>
-                        </svg>
-                        <span className="progress-label">
-                            {safePercentage(athleteInfo?.stats?.attended, athleteInfo?.stats?.total)}%
-                        </span>
-                    </div>
-                </div>
 
-                <div className="stat-card info">
-                    <div className="stat-icon">📅</div>
-                    <div className="stat-content">
-                        <h3>Prochaines Séances</h3>
-                        <div className="stat-value">{upcomingTrainings.length}</div>
-                        <p className="stat-label">À venir</p>
+                    <div className="stat-card info">
+                        <div className="stat-icon">📅</div>
+                        <div className="stat-content">
+                            <h3>Prochaines Séances</h3>
+                            <div className="stat-value">{upcomingTrainings.length}</div>
+                            <p className="stat-label">À venir</p>
+                        </div>
+                        <Link to="/athlete/trainings" className="stat-action">Voir →</Link>
                     </div>
-                    <Link to="/athlete/trainings" className="stat-action">Voir →</Link>
-                </div>
 
-                <div className="stat-card warning">
-                    <div className="stat-icon">📄</div>
-                    <div className="stat-content">
-                        <h3>Documents</h3>
-                        <div className="stat-value">{documents.length}</div>
-                        <p className="stat-label">{validatedDocs} validés • {pendingDocs} en attente</p>
+                    <div className="stat-card warning">
+                        <div className="stat-icon">📄</div>
+                        <div className="stat-content">
+                            <h3>Documents</h3>
+                            <div className="stat-value">{documents.length}</div>
+                            <p className="stat-label">{validatedDocs} validés • {pendingDocs} en attente</p>
+                        </div>
+                        <Link to="/athlete/profile" className="stat-action">Gérer →</Link>
                     </div>
-                    <Link to="/athlete/profile" className="stat-action">Gérer →</Link>
                 </div>
+            </div>
+
+            {/* Performance Chart */}
+            <div className="section-card">
+                <div className="section-header">
+                    <h2>📈 Tendance de Participation</h2>
+                </div>
+                {attendanceTrend.length > 0 ? (
+                    <div className="performance-chart">
+                        <div className="chart-container">
+                            <div className="chart-bars">
+                                {attendanceTrend.map((item, index) => (
+                                    <div key={index} className="chart-bar-container">
+                                        <div 
+                                            className={`chart-bar ${item.attended ? 'attended' : 'missed'}`}
+                                            style={{ height: item.attended ? '100%' : '20%' }}
+                                        ></div>
+                                        <div className="chart-label">{item.date}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="chart-legend">
+                            <div className="legend-item">
+                                <div className="legend-color attended"></div>
+                                <span>Présent</span>
+                            </div>
+                            <div className="legend-item">
+                                <div className="legend-color missed"></div>
+                                <span>Absent</span>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="empty-state">
+                        <span className="empty-icon">📊</span>
+                        <p>Aucune donnée de participation disponible</p>
+                    </div>
+                )}
             </div>
 
             {/* Weekly Schedule */}
@@ -221,6 +302,7 @@ const Dashboard = () => {
                             <div className="training-info">
                                 <h4>{session.title}</h4>
                                 <p><span className="icon">📍</span> {session.location}</p>
+                                <p><span className="icon">🥋</span> {session.level}</p>
                             </div>
                             <div className="training-time">
                                 {new Date(session.session_date).toLocaleTimeString('fr', { hour: '2-digit', minute: '2-digit' })}
@@ -257,6 +339,12 @@ const Dashboard = () => {
                                 <div className="alert-banner danger">
                                     <span className="alert-icon">⚠️</span>
                                     <span>Votre abonnement expire bientôt ! Pensez à renouveler.</span>
+                                </div>
+                            )}
+                            {subscription.daysLeft <= 0 && (
+                                <div className="alert-banner danger">
+                                    <span className="alert-icon">⚠️</span>
+                                    <span>Votre abonnement a expiré ! Veuillez renouveler pour continuer.</span>
                                 </div>
                             )}
                         </div>

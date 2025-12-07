@@ -8,6 +8,8 @@ import (
 	"beautiful-minds/backend/project/internal/models"
 	"beautiful-minds/backend/project/internal/repository"
 
+	"log"
+
 	"github.com/gorilla/mux"
 )
 
@@ -44,6 +46,13 @@ func (h *ScheduleHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Debug log to see what we're sending
+	log.Printf("📤 Sending %d schedules", len(schedules))
+	for i, s := range schedules {
+		log.Printf("   Schedule %d: ID=%d, Day=%s, Time=%s, Duration=%d",
+			i, s.ID, s.DayOfWeek, s.StartTime, s.DurationMinutes)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
