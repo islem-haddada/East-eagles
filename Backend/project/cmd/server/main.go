@@ -75,11 +75,8 @@ func main() {
 	// Créer le routeur
 	router := mux.NewRouter()
 
-	// Middleware CORS
+	// Middleware - Apply to all routes including OPTIONS
 	router.Use(middleware.CORS)
-
-	// Servir les fichiers statiques (uploads)
-	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	// Log all incoming requests for debugging
 	router.Use(func(next http.Handler) http.Handler {
@@ -88,6 +85,18 @@ func main() {
 			next.ServeHTTP(w, r)
 		})
 	})
+
+	// Handle all OPTIONS requests globally to ensure CORS preflight works
+	router.Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Servir les fichiers statiques (uploads)
+	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	// Public routes (Must be defined BEFORE the /api subrouter to avoid shadowing)
 	router.HandleFunc("/api/auth/register", authHandler.Register).Methods("POST")
@@ -131,10 +140,32 @@ func main() {
 	admin.HandleFunc("/trainings/{id}/attendance", trainingHandler.GetAttendance).Methods("GET")
 
 	// Document Management
-	admin.HandleFunc("/documents/pending", documentHandler.GetPending).Methods("GET")
+	// More specific routes first to avoid conflicts
+	admin.HandleFunc("/documents/athlete/{id}", documentHandler.GetByAthlete).Methods("GET")
+	admin.HandleFunc("/documents/{id}/versions", documentHandler.GetVersions).Methods("GET")
+	admin.HandleFunc("/documents/{id}/versions", documentHandler.UploadVersion).Methods("POST")
 	admin.HandleFunc("/documents/{id}/validate", documentHandler.Validate).Methods("POST")
 	admin.HandleFunc("/documents/{id}/reject", documentHandler.Reject).Methods("POST")
-	admin.HandleFunc("/documents/athlete/{id}", documentHandler.GetByAthlete).Methods("GET")
+	admin.HandleFunc("/documents/{id}/share", documentHandler.ShareDocument).Methods("POST")
+	admin.HandleFunc("/documents/{id}/shares", documentHandler.GetShares).Methods("GET")
+	admin.HandleFunc("/documents/{id}/unshare", documentHandler.UnshareDocument).Methods("POST")
+
+	// General document routes
+	admin.HandleFunc("/documents/pending", documentHandler.GetPending).Methods("GET")
+	admin.HandleFunc("/documents/expiring", documentHandler.GetExpiring).Methods("GET")
+	admin.HandleFunc("/documents/expired", documentHandler.GetExpired).Methods("GET")
+	admin.HandleFunc("/documents/bulk-upload", documentHandler.UploadBulk).Methods("POST")
+	admin.HandleFunc("/documents/search", documentHandler.Search).Methods("GET")
+	admin.HandleFunc("/documents/categories", documentHandler.GetCategories).Methods("GET")
+	admin.HandleFunc("/documents/tags", documentHandler.GetTags).Methods("GET")
+	admin.HandleFunc("/documents/shared", documentHandler.GetSharedDocuments).Methods("GET")
+
+	// Test route to debug routing issue
+	admin.HandleFunc("/documents/debug-test", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"message": "Debug test route working"}`))
+	}).Methods("GET")
 
 	// Payment Management
 	admin.HandleFunc("/payments", paymentHandler.Create).Methods("POST")
@@ -158,11 +189,6 @@ func main() {
 	// Document Upload (Athlete)
 	api.HandleFunc("/documents/upload", documentHandler.Upload).Methods("POST")
 	api.HandleFunc("/documents/my", documentHandler.GetMyDocuments).Methods("GET")
-
-	// Handle all OPTIONS requests for CORS preflight
-	api.PathPrefix("").Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
 
 	// Démarrer le serveur
 	port := os.Getenv("PORT")

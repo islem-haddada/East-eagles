@@ -25,6 +25,8 @@ const Dashboard = () => {
                     scheduleAPI.getAll()
                 ]);
 
+                console.log('🔍 Schedule data received:', scheduleRes.data);
+
                 setUpcomingTrainings(trainingsRes.data?.slice(0, 5) || []);
                 setDocuments(docsRes.data || []);
                 setWeeklySchedule(scheduleRes.data || []);
@@ -265,6 +267,12 @@ const Dashboard = () => {
                                 'Thursday': 'Jeudi', 'Friday': 'Vendredi', 'Saturday': 'Samedi', 'Sunday': 'Dimanche'
                             };
                             const slot = weeklySchedule.find(s => s.day_of_week === day);
+                            
+                            // Debug log
+                            if (slot) {
+                                console.log(`🔍 Slot for ${day}:`, slot);
+                            }
+                            
                             return (
                                 <div key={day} className={`schedule-day ${slot ? 'has-schedule' : ''}`}>
                                     <div className="day-header">{dayLabels[day]}</div>

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8083/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -75,11 +75,27 @@ export const documentAPI = {
   upload: (formData) => api.post('/documents/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+  uploadBulk: (formData) => api.post('/admin/documents/bulk-upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  uploadVersion: (id, formData) => api.post(`/admin/documents/${id}/versions`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
   getByAthlete: (id) => api.get(`/admin/documents/athlete/${id}`),
   getMyDocuments: () => api.get(`/documents/my`), // Uses auth context
   getPending: () => api.get('/admin/documents/pending'),
+  getExpiring: () => api.get('/admin/documents/expiring'),
+  getExpired: () => api.get('/admin/documents/expired'),
+  search: (params) => api.get('/admin/documents/search', { params }),
+  getCategories: () => api.get('/admin/documents/categories'),
+  getTags: () => api.get('/admin/documents/tags'),
+  getVersions: (id) => api.get(`/admin/documents/${id}/versions`),
   validate: (id) => api.post(`/admin/documents/${id}/validate`),
   reject: (id, reason) => api.post(`/admin/documents/${id}/reject`, { reason }),
+  share: (id, data) => api.post(`/admin/documents/${id}/share`, data),
+  getShares: (id) => api.get(`/admin/documents/${id}/shares`),
+  unshare: (id, data) => api.post(`/admin/documents/${id}/unshare`, data),
+  getSharedDocuments: () => api.get(`/admin/documents/shared`),
   download: (id) => api.get(`/documents/${id}/download`, { responseType: 'blob' }),
   getDownloadUrl: (id) => `${API_BASE_URL}/documents/${id}/download`
 };
