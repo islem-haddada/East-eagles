@@ -3,8 +3,6 @@
 -- Created: 2025-12-05
 -- Description: Transform from scientific club to Sanda sport club
 
-BEGIN;
-
 -- ============================================================================
 -- STEP 1: Rename members table to athletes
 -- ============================================================================
@@ -22,9 +20,15 @@ ADD COLUMN weight DECIMAL(5,2), -- in kg
 ADD COLUMN height DECIMAL(5,2), -- in cm
 ADD COLUMN gender VARCHAR(10),
 ADD COLUMN address TEXT,
+ADD COLUMN city VARCHAR(100),
+ADD COLUMN postal_code VARCHAR(20),
+ADD COLUMN nationality VARCHAR(50),
+ADD COLUMN photo_url TEXT,
 
 -- Sport-Specific Info
 ADD COLUMN belt_level VARCHAR(50) DEFAULT 'beginner',
+ADD COLUMN skill_level VARCHAR(50) DEFAULT 'beginner',
+ADD COLUMN weight_category VARCHAR(50),
 ADD COLUMN experience_years INTEGER DEFAULT 0,
 ADD COLUMN previous_martial_arts TEXT,
 
@@ -56,6 +60,8 @@ CREATE TABLE users (
     email VARCHAR(120) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) NOT NULL DEFAULT 'athlete', -- 'athlete', 'coach', 'admin'
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
     athlete_id INTEGER REFERENCES athletes(id) ON DELETE SET NULL,
     is_active BOOLEAN DEFAULT true,
     last_login TIMESTAMP,
@@ -148,34 +154,21 @@ FOREIGN KEY (approved_by) REFERENCES users(id);
 
 -- Password hash for 'admin123' using bcrypt (this is just a placeholder)
 -- You should change this immediately after first login
-INSERT INTO users (email, password_hash, role) VALUES
-('admin@easteagles.com', '$2a$10$rO7W8FZbGVTeFNQEQ0zRGu.FJYXbXk5J5fGk4CWfX4k4k4k4k4k4k', 'admin');
+INSERT INTO users (email, password_hash, role, first_name, last_name) VALUES
+('admin@easteagles.com', '$2a$12$WWAU5H5/90rm37VtEHAFKu8ibIbnYTM9WjhnlKdYB0x5byKqFwKdu', 'admin', 'Admin', 'User');
 
 -- ============================================================================
 -- STEP 10: Data Migration - Create user accounts for existing athletes
 -- ============================================================================
 
 -- Create user accounts for existing athletes with pending approval
-INSERT INTO users (email, password_hash, role, athlete_id)
+INSERT INTO users (email, password_hash, role, athlete_id, first_name, last_name)
 SELECT 
     email,
     '$2a$10$temp.temp.temp.temp.temp.temp.temp.temp.temp.temp', -- Temporary hash
     'athlete',
-    id
+    id,
+    first_name,
+    last_name
 FROM athletes
 WHERE email IS NOT NULL;
-
-COMMIT;
-
--- ============================================================================
--- VERIFICATION QUERIES
--- ============================================================================
-
--- Verify table structure
--- SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'athletes';
-
--- Count pending athletes
--- SELECT COUNT(*) FROM athletes WHERE approval_status = 'pending';
-
--- List all users
--- SELECT id, email, role FROM users;

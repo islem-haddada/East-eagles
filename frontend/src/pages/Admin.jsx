@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { memberAPI, eventAPI, announcementAPI } from '../services/api';
+import { memberAPI, eventAPI, announcementAPI, API_BASE_URL } from '../services/api';
 import * as XLSX from 'xlsx';
 import './Admin.css';
 
@@ -45,7 +45,7 @@ const Admin = () => {
 
   const handleEdit = (item) => {
     setEditingId(item.id);
-    setEditForm({...item});
+    setEditForm({ ...item });
   };
 
   const handleSave = async () => {
@@ -53,19 +53,19 @@ const Admin = () => {
       setError('');
       setSuccess('');
       if (activeTab === 'members') {
-        await fetch(`http://localhost:8080/api/members/${editingId}`, {
+        await fetch(`${API_BASE_URL}/members/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(editForm)
         });
       } else if (activeTab === 'events') {
-        await fetch(`http://localhost:8080/api/events/${editingId}`, {
+        await fetch(`${API_BASE_URL}/events/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(editForm)
         });
       } else if (activeTab === 'announcements') {
-        await fetch(`http://localhost:8080/api/announcements/${editingId}`, {
+        await fetch(`${API_BASE_URL}/announcements/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(editForm)
@@ -105,16 +105,16 @@ const Admin = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ?')) return;
-    
+
     try {
       setError('');
       setSuccess('');
       if (activeTab === 'members') {
-        await fetch(`http://localhost:8080/api/members/${id}`, { method: 'DELETE' });
+        await fetch(`${API_BASE_URL}/members/${id}`, { method: 'DELETE' });
       } else if (activeTab === 'events') {
-        await fetch(`http://localhost:8080/api/events/${id}`, { method: 'DELETE' });
+        await fetch(`${API_BASE_URL}/events/${id}`, { method: 'DELETE' });
       } else if (activeTab === 'announcements') {
-        await fetch(`http://localhost:8080/api/announcements/${id}`, { method: 'DELETE' });
+        await fetch(`${API_BASE_URL}/announcements/${id}`, { method: 'DELETE' });
       }
       setSuccess('Élément supprimé avec succès');
       setTimeout(() => setSuccess(''), 3000);
@@ -141,24 +141,24 @@ const Admin = () => {
   return (
     <div className="admin-container">
       <h1>🔧 Panel d'Administration</h1>
-      
+
       {error && <div className="alert alert-error">{error}</div>}
       {success && <div className="alert alert-success">{success}</div>}
-      
+
       <div className="admin-tabs">
-        <button 
+        <button
           className={`tab ${activeTab === 'members' ? 'active' : ''}`}
           onClick={() => setActiveTab('members')}
         >
           👥 Membres ({members.length})
         </button>
-        <button 
+        <button
           className={`tab ${activeTab === 'events' ? 'active' : ''}`}
           onClick={() => setActiveTab('events')}
         >
           📅 Événements ({events.length})
         </button>
-        <button 
+        <button
           className={`tab ${activeTab === 'announcements' ? 'active' : ''}`}
           onClick={() => setActiveTab('announcements')}
         >
@@ -189,27 +189,27 @@ const Admin = () => {
               <div className="form-grid">
                 <div className="form-group">
                   <label>Prénom *</label>
-                  <input type="text" value={newForm.first_name || ''} onChange={(e) => setNewForm({...newForm, first_name: e.target.value})} placeholder="Prénom" />
+                  <input type="text" value={newForm.first_name || ''} onChange={(e) => setNewForm({ ...newForm, first_name: e.target.value })} placeholder="Prénom" />
                 </div>
                 <div className="form-group">
                   <label>Nom *</label>
-                  <input type="text" value={newForm.last_name || ''} onChange={(e) => setNewForm({...newForm, last_name: e.target.value})} placeholder="Nom" />
+                  <input type="text" value={newForm.last_name || ''} onChange={(e) => setNewForm({ ...newForm, last_name: e.target.value })} placeholder="Nom" />
                 </div>
                 <div className="form-group">
                   <label>Email *</label>
-                  <input type="email" value={newForm.email || ''} onChange={(e) => setNewForm({...newForm, email: e.target.value})} placeholder="Email" />
+                  <input type="email" value={newForm.email || ''} onChange={(e) => setNewForm({ ...newForm, email: e.target.value })} placeholder="Email" />
                 </div>
                 <div className="form-group">
                   <label>Téléphone</label>
-                  <input type="tel" value={newForm.phone || ''} onChange={(e) => setNewForm({...newForm, phone: e.target.value})} placeholder="Téléphone" />
+                  <input type="tel" value={newForm.phone || ''} onChange={(e) => setNewForm({ ...newForm, phone: e.target.value })} placeholder="Téléphone" />
                 </div>
                 <div className="form-group">
                   <label>ID Étudiant</label>
-                  <input type="text" value={newForm.student_id || ''} onChange={(e) => setNewForm({...newForm, student_id: e.target.value})} placeholder="ID Étudiant" />
+                  <input type="text" value={newForm.student_id || ''} onChange={(e) => setNewForm({ ...newForm, student_id: e.target.value })} placeholder="ID Étudiant" />
                 </div>
                 <div className="form-group">
                   <label>Filière</label>
-                  <input type="text" value={newForm.field_of_study || ''} onChange={(e) => setNewForm({...newForm, field_of_study: e.target.value})} placeholder="Filière" />
+                  <input type="text" value={newForm.field_of_study || ''} onChange={(e) => setNewForm({ ...newForm, field_of_study: e.target.value })} placeholder="Filière" />
                 </div>
               </div>
               <button onClick={handleAdd} className="btn-save">✓ Ajouter</button>
@@ -232,10 +232,10 @@ const Admin = () => {
                 editingId === member.id ? (
                   <tr key={member.id} className="edit-row">
                     <td>{member.id}</td>
-                    <td><input value={editForm.first_name || ''} onChange={(e) => setEditForm({...editForm, first_name: e.target.value})} /></td>
-                    <td><input value={editForm.last_name || ''} onChange={(e) => setEditForm({...editForm, last_name: e.target.value})} /></td>
-                    <td><input value={editForm.email || ''} onChange={(e) => setEditForm({...editForm, email: e.target.value})} /></td>
-                    <td><input value={editForm.field_of_study || ''} onChange={(e) => setEditForm({...editForm, field_of_study: e.target.value})} /></td>
+                    <td><input value={editForm.first_name || ''} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} /></td>
+                    <td><input value={editForm.last_name || ''} onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} /></td>
+                    <td><input value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} /></td>
+                    <td><input value={editForm.field_of_study || ''} onChange={(e) => setEditForm({ ...editForm, field_of_study: e.target.value })} /></td>
                     <td>
                       <button onClick={handleSave} className="btn-save">✓ Sauvegarder</button>
                       <button onClick={() => setEditingId(null)} className="btn-cancel">✕ Annuler</button>
@@ -276,27 +276,27 @@ const Admin = () => {
               <div className="form-grid">
                 <div className="form-group">
                   <label>Titre *</label>
-                  <input type="text" value={newForm.title || ''} onChange={(e) => setNewForm({...newForm, title: e.target.value})} placeholder="Titre" />
+                  <input type="text" value={newForm.title || ''} onChange={(e) => setNewForm({ ...newForm, title: e.target.value })} placeholder="Titre" />
                 </div>
                 <div className="form-group full">
                   <label>Description</label>
-                  <textarea value={newForm.description || ''} onChange={(e) => setNewForm({...newForm, description: e.target.value})} placeholder="Description" />
+                  <textarea value={newForm.description || ''} onChange={(e) => setNewForm({ ...newForm, description: e.target.value })} placeholder="Description" />
                 </div>
                 <div className="form-group">
                   <label>Date *</label>
-                  <input type="datetime-local" value={newForm.date || ''} onChange={(e) => setNewForm({...newForm, date: e.target.value})} />
+                  <input type="datetime-local" value={newForm.date || ''} onChange={(e) => setNewForm({ ...newForm, date: e.target.value })} />
                 </div>
                 <div className="form-group">
                   <label>Lieu *</label>
-                  <input type="text" value={newForm.location || ''} onChange={(e) => setNewForm({...newForm, location: e.target.value})} placeholder="Lieu" />
+                  <input type="text" value={newForm.location || ''} onChange={(e) => setNewForm({ ...newForm, location: e.target.value })} placeholder="Lieu" />
                 </div>
                 <div className="form-group">
                   <label>URL Image</label>
-                  <input type="url" value={newForm.image_url || ''} onChange={(e) => setNewForm({...newForm, image_url: e.target.value})} placeholder="URL de l'image" />
+                  <input type="url" value={newForm.image_url || ''} onChange={(e) => setNewForm({ ...newForm, image_url: e.target.value })} placeholder="URL de l'image" />
                 </div>
                 <div className="form-group">
                   <label>Max Participants</label>
-                  <input type="number" value={newForm.max_participants || ''} onChange={(e) => setNewForm({...newForm, max_participants: e.target.value})} placeholder="Nombre max" />
+                  <input type="number" value={newForm.max_participants || ''} onChange={(e) => setNewForm({ ...newForm, max_participants: e.target.value })} placeholder="Nombre max" />
                 </div>
               </div>
               <button onClick={handleAdd} className="btn-save">✓ Ajouter</button>
@@ -319,10 +319,10 @@ const Admin = () => {
                 editingId === event.id ? (
                   <tr key={event.id} className="edit-row">
                     <td>{event.id}</td>
-                    <td><input value={editForm.title || ''} onChange={(e) => setEditForm({...editForm, title: e.target.value})} /></td>
-                    <td><input type="datetime-local" value={editForm.date || ''} onChange={(e) => setEditForm({...editForm, date: e.target.value})} /></td>
-                    <td><input value={editForm.location || ''} onChange={(e) => setEditForm({...editForm, location: e.target.value})} /></td>
-                    <td><input type="number" value={editForm.max_participants || ''} onChange={(e) => setEditForm({...editForm, max_participants: e.target.value})} /></td>
+                    <td><input value={editForm.title || ''} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} /></td>
+                    <td><input type="datetime-local" value={editForm.date || ''} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} /></td>
+                    <td><input value={editForm.location || ''} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} /></td>
+                    <td><input type="number" value={editForm.max_participants || ''} onChange={(e) => setEditForm({ ...editForm, max_participants: e.target.value })} /></td>
                     <td>
                       <button onClick={handleSave} className="btn-save">✓ Sauvegarder</button>
                       <button onClick={() => setEditingId(null)} className="btn-cancel">✕ Annuler</button>
@@ -363,14 +363,14 @@ const Admin = () => {
               <div className="form-grid">
                 <div className="form-group full">
                   <label>Titre *</label>
-                  <input type="text" value={newForm.title || ''} onChange={(e) => setNewForm({...newForm, title: e.target.value})} placeholder="Titre" />
+                  <input type="text" value={newForm.title || ''} onChange={(e) => setNewForm({ ...newForm, title: e.target.value })} placeholder="Titre" />
                 </div>
                 <div className="form-group full">
                   <label>Contenu *</label>
-                  <textarea value={newForm.content || ''} onChange={(e) => setNewForm({...newForm, content: e.target.value})} placeholder="Contenu" rows="4" />
+                  <textarea value={newForm.content || ''} onChange={(e) => setNewForm({ ...newForm, content: e.target.value })} placeholder="Contenu" rows="4" />
                 </div>
                 <div className="form-group checkbox">
-                  <input type="checkbox" checked={newForm.is_pinned || false} onChange={(e) => setNewForm({...newForm, is_pinned: e.target.checked})} id="is_pinned" />
+                  <input type="checkbox" checked={newForm.is_pinned || false} onChange={(e) => setNewForm({ ...newForm, is_pinned: e.target.checked })} id="is_pinned" />
                   <label htmlFor="is_pinned">Épingler cette annonce</label>
                 </div>
               </div>
@@ -393,9 +393,9 @@ const Admin = () => {
                 editingId === ann.id ? (
                   <tr key={ann.id} className="edit-row">
                     <td>{ann.id}</td>
-                    <td><input value={editForm.title || ''} onChange={(e) => setEditForm({...editForm, title: e.target.value})} /></td>
-                    <td><textarea value={editForm.content || ''} onChange={(e) => setEditForm({...editForm, content: e.target.value})} rows="3" /></td>
-                    <td><input type="checkbox" checked={editForm.is_pinned || false} onChange={(e) => setEditForm({...editForm, is_pinned: e.target.checked})} /></td>
+                    <td><input value={editForm.title || ''} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} /></td>
+                    <td><textarea value={editForm.content || ''} onChange={(e) => setEditForm({ ...editForm, content: e.target.value })} rows="3" /></td>
+                    <td><input type="checkbox" checked={editForm.is_pinned || false} onChange={(e) => setEditForm({ ...editForm, is_pinned: e.target.checked })} /></td>
                     <td>
                       <button onClick={handleSave} className="btn-save">✓ Sauvegarder</button>
                       <button onClick={() => setEditingId(null)} className="btn-cancel">✕ Annuler</button>

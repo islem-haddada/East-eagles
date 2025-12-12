@@ -227,8 +227,44 @@ func (h *AthleteHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 	athlete, err := h.repo.GetByEmail(email)
 	if err != nil {
-		http.Error(w, "Athlete profile not found", http.StatusNotFound)
-		return
+		// If athlete doesn't exist, create a basic profile for them
+		// This handles the case where a user exists but no athlete profile has been created yet
+		fmt.Printf("Athlete with email %s not found, creating new profile\n", email)
+
+		// Create a basic athlete profile
+		createReq := &models.CreateAthleteRequest{
+			FirstName:                "", // Will be updated by the user
+			LastName:                 "", // Will be updated by the user
+			Email:                    email,
+			Phone:                    "",
+			DateOfBirth:              "",
+			WeightKG:                 0,
+			Gender:                   "",
+			Nationality:              "",
+			Address:                  "",
+			City:                     "",
+			PostalCode:               "",
+			BeltLevel:                "beginner",
+			SkillLevel:               "beginner",
+			YearsOfExperience:        0,
+			WeightCategory:           "",
+			EmergencyContactName:     "",
+			EmergencyContactPhone:    "",
+			EmergencyContactRelation: "",
+			MedicalConditions:        "",
+			Allergies:                "",
+			BloodType:                "",
+			PhotoURL:                 "",
+		}
+
+		athlete, err = h.repo.Create(createReq)
+		if err != nil {
+			fmt.Printf("Error creating athlete profile: %v\n", err)
+			http.Error(w, "Error creating athlete profile", http.StatusInternalServerError)
+			return
+		}
+
+		fmt.Printf("Created new athlete profile with ID: %d\n", athlete.ID)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -245,6 +281,8 @@ func (h *AthleteHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	athlete, err := h.repo.GetByEmail(email)
 	if err != nil {
+		// If athlete doesn't exist, return an error
+		// The GetProfile function should have created the profile already
 		http.Error(w, "Athlete profile not found", http.StatusNotFound)
 		return
 	}

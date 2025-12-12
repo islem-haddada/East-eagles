@@ -38,23 +38,49 @@ func main() {
 
 	fmt.Println("Connected to database")
 
+	// Define the migration files in order
 	migrations := []string{
-		"migrations/005_add_is_active.sql",
-		"migrations/003_payments_schedule.sql",
+		"project/migrations/001_init_schema.sql",
+		"project/migrations/002_sanda_club_schema.sql",
+		"project/migrations/003_payments_schedule.sql",
+		"project/migrations/004_fix_schema_mismatch.sql",
+		"project/migrations/005_add_is_active.sql",
+		"project/migrations/006_fix_attendance_table.sql",
+		"project/migrations/007_add_document_tags.sql",
+		"project/migrations/008_add_document_versions.sql",
+		"project/migrations/009_add_document_sharing.sql",
 	}
 
+	// Run each migration in a separate transaction
 	for _, migrationFile := range migrations {
 		fmt.Printf("Running migration: %s\n", migrationFile)
 
+		// Get absolute path from current directory
 		path, _ := filepath.Abs(migrationFile)
 		content, err := ioutil.ReadFile(path)
 		if err != nil {
-			log.Fatalf("Failed to read migration file %s: %v", migrationFile, err)
+			log.Printf("Failed to read migration file %s: %v", migrationFile, err)
+			continue
 		}
 
-		_, err = db.Exec(string(content))
+		// Execute in a separate transaction
+		tx, err := db.Begin()
+		if err != nil {
+			log.Printf("Failed to begin transaction for %s: %v", migrationFile, err)
+			continue
+		}
+
+		_, err = tx.Exec(string(content))
 		if err != nil {
 			log.Printf("Error running migration %s: %v", migrationFile, err)
+			tx.Rollback()
+			// Continue with next migration
+			continue
+		}
+
+		err = tx.Commit()
+		if err != nil {
+			log.Printf("Failed to commit transaction for %s: %v", migrationFile, err)
 		} else {
 			fmt.Printf("Successfully ran migration: %s\n", migrationFile)
 		}
@@ -88,5 +114,4 @@ func main() {
 			}
 		}
 	}
-
 }

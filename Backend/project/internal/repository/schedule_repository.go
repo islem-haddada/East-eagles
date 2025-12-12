@@ -93,17 +93,29 @@ func (r *ScheduleRepository) GetAll() ([]*models.TrainingSchedule, error) {
 		if startTimeStr.Valid {
 			log.Printf("🔍 DEBUG GetAll - ID: %d, Raw start_time from DB: '%s', Length: %d, Valid: %t", s.ID, startTimeStr.String, len(startTimeStr.String), startTimeStr.Valid)
 
-			// Handle different time formats
-			// PostgreSQL TIME type might return different formats
-			if len(startTimeStr.String) >= 8 && startTimeStr.String[2] == ':' && startTimeStr.String[5] == ':' {
+			// PostgreSQL TIME type can be returned in different formats by the Go driver:
+			// - "HH:MM:SS" format (e.g., "18:00:00")
+			// - RFC3339 with 0000-01-01 date (e.g., "0000-01-01T18:00:00Z")
+			timeStr := startTimeStr.String
+
+			// Check if it's an RFC3339 timestamp format
+			if len(timeStr) >= 20 && timeStr[4] == '-' && timeStr[7] == '-' && timeStr[10] == 'T' {
+				// Extract time portion from "0000-01-01T18:00:00Z" format
+				// Time starts at position 11, extract HH:MM (chars 11-15)
+				if len(timeStr) >= 16 {
+					s.StartTime = timeStr[11:16]
+				} else {
+					s.StartTime = timeStr
+				}
+			} else if len(timeStr) >= 8 && timeStr[2] == ':' && timeStr[5] == ':' {
 				// Format is HH:MM:SS, extract HH:MM
-				s.StartTime = startTimeStr.String[:5]
-			} else if len(startTimeStr.String) >= 5 {
-				// Format is already HH:MM or similar
-				s.StartTime = startTimeStr.String[:5]
+				s.StartTime = timeStr[:5]
+			} else if len(timeStr) >= 5 && timeStr[2] == ':' {
+				// Format is already HH:MM
+				s.StartTime = timeStr[:5]
 			} else {
 				// Unexpected format, use as-is
-				s.StartTime = startTimeStr.String
+				s.StartTime = timeStr
 			}
 		} else {
 			log.Printf("🔍 DEBUG GetAll - ID: %d, start_time is NULL", s.ID)

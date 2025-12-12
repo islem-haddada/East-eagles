@@ -1,3 +1,14 @@
-nohup: ignoring input
-2025/11/14 19:07:46 ✅ Connexion à PostgreSQL réussie
-2025/11/14 19:07:46 🚀 Serveur démarré sur le port 8080
+2025/12/12 16:40:43 ✅ Connexion à PostgreSQL réussie
+2025/12/12 16:40:43 🚀 Serveur démarré sur le port 8081
+2025/12/12 16:40:56 🔍 DEBUG GetAll - ID: 1, Raw start_time from DB: '0000-01-01T18:00:00Z', Length: 20
+2025/12/12 16:40:56 🔍 DEBUG GetAll - ID: 1, Formatted start_time: '0000-'
+2025/12/12 16:41:26 🔍 DEBUG GetAll - ID: 1, Raw start_time from DB: '0000-01-01T18:00:00Z', Length: 20
+2025/12/12 16:41:26 🔍 DEBUG GetAll - ID: 1, Formatted start_time: '0000-'
+2025/12/12 16:41:56 🔍 DEBUG GetAll - ID: 1, Raw start_time from DB: '0000-01-01T18:00:00Z', Length: 20
+2025/12/12 16:41:56 🔍 DEBUG GetAll - ID: 1, Formatted start_time: '0000-'
+2025/12/12 16:42:26 🔍 DEBUG GetAll - ID: 1, Raw start_time from DB: '0000-01-01T18:00:00Z', Length: 20
+2025/12/12 16:42:26 🔍 DEBUG GetAll - ID: 1, Formatted start_time: '0000-'
+2025/12/12 16:42:56 🔍 DEBUG GetAll - ID: 1, Raw start_time from DB: '0000-01-01T18:00:00Z', Length: 20
+2025/12/12 16:42:56 🔍 DEBUG GetAll - ID: 1, Formatted start_time: '0000-'
+2025/12/12 16:43:26 🔍 DEBUG GetAll - ID: 1, Raw start_time from DB: '0000-01-01T18:00:00Z', Length: 20
+2025/12/12 16:43:26 🔍 DEBUG GetAll - ID: 1, Formatted start_time: '0000-'

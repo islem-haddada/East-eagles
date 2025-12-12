@@ -7,6 +7,18 @@ DROP TABLE IF EXISTS event_registrations CASCADE;
 DROP TABLE IF EXISTS announcements CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
 DROP TABLE IF EXISTS members CASCADE;
+DROP TABLE IF EXISTS athletes CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS documents CASCADE;
+DROP TABLE IF EXISTS training_sessions CASCADE;
+DROP TABLE IF EXISTS attendance CASCADE;
+DROP TABLE IF EXISTS payments CASCADE;
+DROP TABLE IF EXISTS training_schedules CASCADE;
+DROP TABLE IF EXISTS document_shares CASCADE;
+DROP TABLE IF EXISTS document_versions CASCADE;
+DROP TABLE IF EXISTS document_tag_relations CASCADE;
+DROP TABLE IF EXISTS document_tags CASCADE;
+DROP TABLE IF EXISTS document_categories CASCADE;
 
 -- Create Members Table
 CREATE TABLE members (
@@ -81,4 +93,4 @@ CREATE INDEX idx_event_registrations_member_id ON event_registrations(member_id)
 -- ('Bienvenue au Club East Eagles!', 'Nous sommes heureux de vous accueillir dans notre nouveau système de gestion.', true),
 -- ('Réunion Mensuelle', 'La prochaine réunion aura lieu le 10 décembre à 18h00.', false);
 
-COMMIT;
+

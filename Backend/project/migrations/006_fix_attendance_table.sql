@@ -2,8 +2,6 @@
 -- Migration: 006_fix_attendance_table.sql
 -- Description: Add missing columns to attendance table
 
-BEGIN;
-
 -- Check if columns exist and add them if they don't
 DO $$
 BEGIN
@@ -35,5 +33,3 @@ BEGIN
         UPDATE attendance SET marked_at = created_at WHERE marked_at IS NULL;
     END IF;
 END $$;
-
-COMMIT;

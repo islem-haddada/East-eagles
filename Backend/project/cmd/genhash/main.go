@@ -7,7 +7,9 @@ import (
 )
 
 func main() {
-	password := "admin123"
-	bytes, _ := bcrypt.GenerateFromPassword([]byte(password), 12)
+	bytes, err := bcrypt.GenerateFromPassword([]byte("admin123"), 12)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println(string(bytes))
 }
