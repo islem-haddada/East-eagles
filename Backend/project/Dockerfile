@@ -3,30 +3,26 @@ FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
-# Copy go mod files from Backend/project
-COPY Backend/project/go.mod Backend/project/go.sum ./
+# Copy go mod files
+COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code from Backend/project
-COPY Backend/project/ .
+# Copy source code
+COPY . .
 
-# Build the binary with minimal memory usage
+# Build binary
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o server ./cmd/server
 
-# Final stage - use scratch for minimal size
+# Final stage
 FROM alpine:3.19
 
 WORKDIR /app
 
-# Install ca-certificates
 RUN apk --no-cache add ca-certificates
 
-# Copy binary from builder
 COPY --from=builder /app/server .
 COPY --from=builder /app/migrations ./migrations
 
-# Expose port
 EXPOSE 8080
 
-# Run the server
 CMD ["./server"]
