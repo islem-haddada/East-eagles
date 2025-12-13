@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"beautiful-minds/backend/project/internal/services"
+	"east-eagles/backend/internal/services"
 )
 
 type contextKey string

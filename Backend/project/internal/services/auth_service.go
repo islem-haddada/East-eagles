@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"beautiful-minds/backend/project/internal/models"
-	"beautiful-minds/backend/project/internal/repository"
+	"east-eagles/backend/internal/models"
+	"east-eagles/backend/internal/repository"
 
 	"github.com/golang-jwt/jwt/v5"
 )

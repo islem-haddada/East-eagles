@@ -7,7 +7,7 @@ import (
 	"log"
 	"path/filepath"
 
-	"beautiful-minds/backend/project/config"
+	"east-eagles/backend/config"
 
 	"github.com/joho/godotenv"
 

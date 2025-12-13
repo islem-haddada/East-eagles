@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"beautiful-minds/backend/project/internal/models"
+	"east-eagles/backend/internal/models"
 )
 
 // RequireAdmin ensures the user has admin role

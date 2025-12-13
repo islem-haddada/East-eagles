@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"os"
 
-	"beautiful-minds/backend/project/config"
-	"beautiful-minds/backend/project/internal/database"
-	"beautiful-minds/backend/project/internal/handlers"
-	"beautiful-minds/backend/project/internal/middleware"
-	"beautiful-minds/backend/project/internal/repository"
-	"beautiful-minds/backend/project/internal/services"
+	"east-eagles/backend/config"
+	"east-eagles/backend/internal/database"
+	"east-eagles/backend/internal/handlers"
+	"east-eagles/backend/internal/middleware"
+	"east-eagles/backend/internal/repository"
+	"east-eagles/backend/internal/services"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"

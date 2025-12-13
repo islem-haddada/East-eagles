@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"log"
 
-	"beautiful-minds/backend/project/internal/models"
+	"east-eagles/backend/internal/models"
 )
 
 type ScheduleRepository struct {

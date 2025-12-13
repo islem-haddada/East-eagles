@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"beautiful-minds/backend/project/internal/models"
+	"east-eagles/backend/internal/models"
 
 	"github.com/lib/pq"
 )

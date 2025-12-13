@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"beautiful-minds/backend/project/internal/middleware"
-	"beautiful-minds/backend/project/internal/models"
-	"beautiful-minds/backend/project/internal/repository"
+	"east-eagles/backend/internal/middleware"
+	"east-eagles/backend/internal/models"
+	"east-eagles/backend/internal/repository"
 
 	"github.com/gorilla/mux"
 )

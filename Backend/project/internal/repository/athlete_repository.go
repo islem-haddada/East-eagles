@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"beautiful-minds/backend/project/internal/models"
+	"east-eagles/backend/internal/models"
 	"database/sql"
 	"fmt"
 )
