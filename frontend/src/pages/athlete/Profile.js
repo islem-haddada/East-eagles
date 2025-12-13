@@ -17,6 +17,12 @@ const Profile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState({});
 
+    // Delete confirmation modal state
+    const [deleteModal, setDeleteModal] = useState({ show: false, docId: null, docName: '' });
+
+    // Preview modal state
+    const [previewModal, setPreviewModal] = useState({ show: false, doc: null, url: null });
+
     // Upload form state
     const [uploadForm, setUploadForm] = useState({
         document_type: 'medical_certificate',
@@ -26,6 +32,12 @@ const Profile = () => {
     });
     const [uploading, setUploading] = useState(false);
     const [activeTab, setActiveTab] = useState('info'); // 'info', 'documents', 'payments'
+
+    const getDocumentTypeLabel = (type) => {
+        const key = `profile.document_types.${type}`;
+        const translated = t(key);
+        return translated !== key ? translated : (type?.replace(/_/g, ' ') || t('profile.documents'));
+    };
 
     const fetchData = async () => {
         try {
@@ -50,7 +62,23 @@ const Profile = () => {
         }
     };
 
-    const handleOpenDocument = async (docId, fileName) => {
+    const handleOpenDocument = async (doc) => {
+        try {
+            const token = localStorage.getItem('token');
+            const previewUrl = `${documentAPI.getPreviewUrl(doc.id)}?token=${token}`;
+            
+            setPreviewModal({ 
+                show: true, 
+                doc: doc,
+                url: previewUrl
+            });
+        } catch (error) {
+            console.error("Preview error", error);
+            notify.error("Erreur lors de l'ouverture du document");
+        }
+    };
+
+    const handleDownloadDocument = async (docId, fileName) => {
         try {
             notify.info(t('common.loading'));
             const response = await documentAPI.download(docId);
@@ -74,6 +102,31 @@ const Profile = () => {
         } catch (error) {
             console.error("Download error", error);
             notify.error("Erreur lors du téléchargement du fichier");
+        }
+    };
+
+    const closePreviewModal = () => {
+        setPreviewModal({ show: false, doc: null, url: null });
+    };
+
+    const openDeleteModal = (docId, docName) => {
+        setDeleteModal({ show: true, docId, docName });
+    };
+
+    const closeDeleteModal = () => {
+        setDeleteModal({ show: false, docId: null, docName: '' });
+    };
+
+    const confirmDeleteDocument = async () => {
+        try {
+            await documentAPI.deleteMyDocument(deleteModal.docId);
+            notify.success("Document supprimé avec succès");
+            closeDeleteModal();
+            fetchData();
+        } catch (error) {
+            console.error("Delete error", error);
+            notify.error("Erreur lors de la suppression du document");
+            closeDeleteModal();
         }
     };
 
@@ -391,17 +444,19 @@ const Profile = () => {
                 {activeTab === 'documents' && (
                     <div className="tab-pane fade-in">
                         <div className="documents-layout">
+                            {/* Upload Card */}
                             <div className="card upload-card">
                                 <h3>📤 {t('profile.upload_document')}</h3>
                                 <form onSubmit={handleUpload}>
                                     <div className="form-group">
                                         <label>{t('profile.type')}</label>
                                         <select name="document_type" value={uploadForm.document_type} onChange={handleInputChange}>
-                                            <option value="medical_certificate">Certificat Médical</option>
-                                            <option value="photo">Photo d'identité</option>
-                                            <option value="id_card">Carte d'identité</option>
-                                            <option value="parental_consent">Autorisation Parentale</option>
-                                            <option value="other">Autre</option>
+                                            <option value="medical_certificate">{t('profile.document_types.medical_certificate')}</option>
+                                            <option value="photo">{t('profile.document_types.photo')}</option>
+                                            <option value="identity_card">{t('profile.document_types.identity_card')}</option>
+                                            <option value="insurance">{t('profile.document_types.insurance')}</option>
+                                            <option value="parental_authorization">{t('profile.document_types.parental_authorization')}</option>
+                                            <option value="other">{t('profile.document_types.other')}</option>
                                         </select>
                                     </div>
                                     <div className="form-group">
@@ -410,53 +465,188 @@ const Profile = () => {
                                     </div>
                                     <div className="form-group">
                                         <label>{t('profile.file')}</label>
-                                        <input type="file" id="fileInput" onChange={handleFileChange} required className="file-input" />
+                                        <div className="file-upload-wrapper">
+                                            <input type="file" id="fileInput" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" />
+                                            <label htmlFor="fileInput" className="file-upload-label">
+                                                {uploadForm.file ? uploadForm.file.name : t('profile.drag_drop') + ' ' + t('profile.file_types')}
+                                            </label>
+                                        </div>
                                     </div>
                                     <div className="form-group">
                                         <label>{t('profile.notes')}</label>
-                                        <input type="text" name="notes" value={uploadForm.notes} onChange={handleInputChange} placeholder={t('common.optional')} />
+                                        <input type="text" name="notes" value={uploadForm.notes} onChange={handleInputChange} placeholder={t('profile.optional_notes')} />
                                     </div>
-                                    <button type="submit" disabled={uploading} className="btn-primary full-width">
-                                        {uploading ? t('common.loading') : t('profile.upload_btn')}
+                                    <button type="submit" disabled={uploading || !uploadForm.file} className="btn-primary full-width">
+                                        {uploading ? t('profile.uploading') : t('profile.upload_btn')}
                                     </button>
                                 </form>
                             </div>
 
-                            <div className="documents-grid">
-                                {documents.sort((a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at)).map(doc => (
-                                    <div key={doc.id} className="document-card clickable" onClick={() => handleOpenDocument(doc.id, doc.original_name || `document-${doc.document_type}`)}>
-                                        <div className={`doc-icon-wrapper ${doc.document_type}`}>
-                                            <span className="doc-icon">📄</span>
-                                        </div>
-                                        <div className="doc-info">
-                                            <h4>{t(`admin_documents.label_${doc.document_type}`) || doc.document_type.replace(/_/g, ' ')}</h4>
-                                            <div className="doc-meta">
-                                                <p className="doc-date">Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}</p>
-                                                {doc.expiry_date && (
-                                                    <p className={`doc-expiry ${new Date(doc.expiry_date) < new Date() ? 'expired' : ''}`}>
-                                                        Expires: {new Date(doc.expiry_date).toLocaleDateString()}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <div className="doc-status-row">
-                                                <span className={`status-pill ${doc.validation_status}`}>
-                                                    {doc.validation_status === 'approved' ? '✅ Validé' :
-                                                        doc.validation_status === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
-                                                </span>
-                                                <button className="btn-view-doc">👁️ Ouvrir</button>
-                                            </div>
-                                        </div>
-                                        {doc.rejection_reason && (
-                                            <div className="doc-rejection-tooltip" title={doc.rejection_reason}>
-                                                ❓ Motif du rejet
-                                            </div>
-                                        )}
+                            {/* Documents History */}
+                            <div className="documents-history-container">
+                                <div className="documents-history-header">
+                                    <h3>📋 {t('profile.my_documents')} ({documents.length})</h3>
+                                    <div className="docs-stats">
+                                        <span className="doc-stat validated">✓ {documents.filter(d => d.validation_status === 'validated').length} {t('profile.validated')}</span>
+                                        <span className="doc-stat pending">⏳ {documents.filter(d => d.validation_status === 'pending').length} {t('profile.pending')}</span>
+                                        <span className="doc-stat rejected">✗ {documents.filter(d => d.validation_status === 'rejected').length} {t('profile.rejected')}</span>
                                     </div>
-                                ))}
-                                {documents.length === 0 && (
-                                    <div className="empty-state">
-                                        <p>Aucun document pour le moment.</p>
+                                </div>
+
+                                {documents.length === 0 ? (
+                                    <div className="empty-docs-state">
+                                        <span className="empty-icon">📭</span>
+                                        <p>{t('profile.no_documents')}</p>
                                     </div>
+                                ) : (
+                                    <>
+                                        {/* Documents Table */}
+                                        <div className="documents-table-wrapper">
+                                            <table className="documents-history-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>{t('profile.table.type')}</th>
+                                                        <th>{t('profile.table.file')}</th>
+                                                        <th>{t('profile.table.uploaded_at')}</th>
+                                                        <th>{t('profile.table.status')}</th>
+                                                        <th>{t('profile.table.validated_at')}</th>
+                                                        <th>{t('profile.table.actions')}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {documents
+                                                        .sort((a, b) => new Date(b.uploaded_at || b.created_at) - new Date(a.uploaded_at || a.created_at))
+                                                        .map(doc => (
+                                                        <tr key={doc.id} className={`doc-row ${doc.validation_status}`}>
+                                                            <td>
+                                                                <div className="doc-type-cell">
+                                                                    <span className="doc-type-icon-small">
+                                                                        {doc.document_type === 'medical_certificate' && '🏥'}
+                                                                        {doc.document_type === 'photo' && '📷'}
+                                                                        {doc.document_type === 'identity_card' && '🪪'}
+                                                                        {doc.document_type === 'insurance' && '🛡️'}
+                                                                        {doc.document_type === 'parental_authorization' && '👨‍👩‍👧'}
+                                                                        {doc.document_type === 'other' && '📄'}
+                                                                        {!['medical_certificate', 'photo', 'identity_card', 'insurance', 'parental_authorization', 'other'].includes(doc.document_type) && '📄'}
+                                                                    </span>
+                                                                    {getDocumentTypeLabel(doc.document_type)}
+                                                                </div>
+                                                            </td>
+                                                            <td className="doc-filename-cell">
+                                                                {doc.file_name || doc.original_name || 'Document'}
+                                                            </td>
+                                                            <td className="doc-date-cell">
+                                                                {new Date(doc.uploaded_at || doc.created_at).toLocaleDateString('fr-FR', {
+                                                                    day: '2-digit',
+                                                                    month: 'short',
+                                                                    year: 'numeric'
+                                                                })}
+                                                            </td>
+                                                            <td>
+                                                                <span className={`status-badge-small ${doc.validation_status}`}>
+                                                                    {doc.validation_status === 'validated' && t('profile.status.validated')}
+                                                                    {doc.validation_status === 'rejected' && t('profile.status.rejected')}
+                                                                    {doc.validation_status === 'pending' && t('profile.status.pending')}
+                                                                    {!['validated', 'rejected', 'pending'].includes(doc.validation_status) && t('profile.status.pending')}
+                                                                </span>
+                                                                {doc.rejection_reason && (
+                                                                    <div className="rejection-tooltip">
+                                                                        ⚠️ {doc.rejection_reason}
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                            <td className="doc-date-cell">
+                                                                {doc.validated_at ? new Date(doc.validated_at).toLocaleDateString('fr-FR', {
+                                                                    day: '2-digit',
+                                                                    month: 'short',
+                                                                    year: 'numeric'
+                                                                }) : '-'}
+                                                            </td>
+                                                            <td>
+                                                                <div className="doc-actions">
+                                                                    <button 
+                                                                        className="btn-action-view"
+                                                                        onClick={() => handleOpenDocument(doc)}
+                                                                        title={t('profile.actions.view')}
+                                                                    >
+                                                                        👁️
+                                                                    </button>
+                                                                    <button 
+                                                                        className="btn-action-download"
+                                                                        onClick={() => handleDownloadDocument(doc.id, doc.file_name || doc.original_name)}
+                                                                        title={t('profile.actions.download')}
+                                                                    >
+                                                                        ⬇️
+                                                                    </button>
+                                                                    <button 
+                                                                        className="btn-action-delete"
+                                                                        onClick={() => openDeleteModal(doc.id, getDocumentTypeLabel(doc.document_type))}
+                                                                        title={t('profile.actions.delete')}
+                                                                    >
+                                                                        🗑️
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Timeline View */}
+                                        <div className="documents-timeline">
+                                            <h4>{t('profile.recent_history')}</h4>
+                                            <div className="timeline">
+                                                {documents
+                                                    .sort((a, b) => new Date(b.uploaded_at || b.created_at) - new Date(a.uploaded_at || a.created_at))
+                                                    .slice(0, 5)
+                                                    .map((doc, index) => (
+                                                    <div key={doc.id} className={`timeline-item ${doc.validation_status}`}>
+                                                        <div className="timeline-marker"></div>
+                                                        <div className="timeline-content">
+                                                            <div className="timeline-date">
+                                                                {new Date(doc.uploaded_at || doc.created_at).toLocaleDateString('fr-FR', {
+                                                                    day: '2-digit',
+                                                                    month: 'long',
+                                                                    year: 'numeric'
+                                                                })}
+                                                            </div>
+                                                            <div className="timeline-title">
+                                                                <span className="timeline-icon">
+                                                                    {doc.document_type === 'medical_certificate' && '🏥'}
+                                                                    {doc.document_type === 'photo' && '📷'}
+                                                                    {doc.document_type === 'identity_card' && '🪪'}
+                                                                    {doc.document_type === 'insurance' && '🛡️'}
+                                                                    {doc.document_type === 'parental_authorization' && '👨‍👩‍👧'}
+                                                                    {doc.document_type === 'other' && '📄'}
+                                                                    {!['medical_certificate', 'photo', 'identity_card', 'insurance', 'parental_authorization', 'other'].includes(doc.document_type) && '📄'}
+                                                                </span>
+                                                                {getDocumentTypeLabel(doc.document_type)}
+                                                            </div>
+                                                            <div className="timeline-status">
+                                                                <span className={`status-badge-small ${doc.validation_status}`}>
+                                                                    {doc.validation_status === 'validated' && t('profile.status.validated')}
+                                                                    {doc.validation_status === 'rejected' && t('profile.status.rejected')}
+                                                                    {doc.validation_status === 'pending' && t('profile.status.pending')}
+                                                                    {!['validated', 'rejected', 'pending'].includes(doc.validation_status) && t('profile.status.pending')}
+                                                                </span>
+                                                            </div>
+                                                            {doc.validated_at && (
+                                                                <div className="timeline-validated">
+                                                                    {doc.validation_status === 'validated' ? '✓ Validé' : '✗ Traité'} le {new Date(doc.validated_at).toLocaleDateString('fr-FR')}
+                                                                </div>
+                                                            )}
+                                                            {doc.rejection_reason && (
+                                                                <div className="timeline-rejection">
+                                                                    <strong>Motif:</strong> {doc.rejection_reason}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </>
                                 )}
                             </div>
                         </div>
@@ -498,6 +688,67 @@ const Profile = () => {
                     </div>
                 )}
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {deleteModal.show && (
+                <div className="delete-modal-overlay" onClick={closeDeleteModal}>
+                    <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="delete-modal-icon">🗑️</div>
+                        <h3>{t('profile.delete_modal.title')}</h3>
+                        <p>{t('profile.delete_modal.message')} <strong>"{deleteModal.docName}"</strong> ?</p>
+                        <p className="delete-modal-warning">{t('profile.delete_modal.warning')}</p>
+                        <div className="delete-modal-actions">
+                            <button className="btn-cancel" onClick={closeDeleteModal}>
+                                {t('profile.delete_modal.cancel')}
+                            </button>
+                            <button className="btn-confirm-delete" onClick={confirmDeleteDocument}>
+                                {t('profile.delete_modal.confirm')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Preview Modal */}
+            {previewModal.show && previewModal.doc && (
+                <div className="preview-modal-overlay" onClick={closePreviewModal}>
+                    <div className="preview-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="preview-modal-header">
+                            <h3>{previewModal.doc.file_name || previewModal.doc.original_name}</h3>
+                            <button className="preview-close-btn" onClick={closePreviewModal}>×</button>
+                        </div>
+                        <div className="preview-modal-content">
+                            {previewModal.doc.mime_type?.startsWith('image/') ? (
+                                <img 
+                                    src={previewModal.url} 
+                                    alt={previewModal.doc.file_name} 
+                                />
+                            ) : previewModal.doc.mime_type === 'application/pdf' ? (
+                                <iframe 
+                                    src={previewModal.url} 
+                                    title={previewModal.doc.file_name}
+                                />
+                            ) : (
+                                <div className="preview-not-supported">
+                                    <p>{t('profile.preview.not_supported')}</p>
+                                    <small>{t('profile.preview.download_instead')}</small>
+                                </div>
+                            )}
+                        </div>
+                        <div className="preview-modal-footer">
+                            <button 
+                                className="btn-preview-download"
+                                onClick={() => handleDownloadDocument(previewModal.doc.id, previewModal.doc.file_name)}
+                            >
+                                ⬇️ {t('profile.preview.download')}
+                            </button>
+                            <button className="btn-preview-close" onClick={closePreviewModal}>
+                                {t('profile.preview.close')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

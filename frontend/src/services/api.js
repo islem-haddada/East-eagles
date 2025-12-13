@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-export const API_BASE_URL = 'http://localhost:8080/api'; // Forced for debugging
-// export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+// Use environment variable in production, fallback to localhost for development
+export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -98,7 +98,10 @@ export const documentAPI = {
   unshare: (id, data) => api.post(`/admin/documents/${id}/unshare`, data),
   getSharedDocuments: () => api.get(`/admin/documents/shared`),
   download: (id) => api.get(`/documents/${id}/download`, { responseType: 'blob' }),
-  getDownloadUrl: (id) => `${API_BASE_URL}/documents/${id}/download`
+  getDownloadUrl: (id) => `${API_BASE_URL}/documents/${id}/download`,
+  getPreviewUrl: (id) => `${API_BASE_URL}/documents/${id}/preview`,
+  delete: (id) => api.delete(`/admin/documents/${id}`),
+  deleteMyDocument: (id) => api.delete(`/documents/${id}`)
 };
 
 export const paymentAPI = {

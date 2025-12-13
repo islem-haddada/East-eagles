@@ -148,7 +148,7 @@ func (r *DocumentRepository) GetLatestVersionNumber(documentID int) (int, error)
 func (r *DocumentRepository) GetByAthlete(athleteID int) ([]*models.Document, error) {
 	query := `
 		SELECT d.id, d.athlete_id, d.document_type, d.category_id, d.file_name, d.file_path, d.file_url,
-		       d.validation_status, d.expiry_date, d.uploaded_at, d.notes, d.rejection_reason,
+		       d.validation_status, d.expiry_date, d.uploaded_at, d.notes, d.rejection_reason, d.mime_type,
 			   c.id, c.name, c.description, c.color, c.created_at
 		FROM documents d
 		LEFT JOIN document_categories c ON d.category_id = c.id
@@ -166,14 +166,14 @@ func (r *DocumentRepository) GetByAthlete(athleteID int) ([]*models.Document, er
 
 	for rows.Next() {
 		var doc models.Document
-		var notes, rejectionReason sql.NullString
+		var notes, rejectionReason, mimeType sql.NullString
 		var categoryID sql.NullInt64
 		var categoryName, categoryDescription, categoryColor sql.NullString
 		var categoryCreatedAt sql.NullTime
 
 		if err := rows.Scan(
 			&doc.ID, &doc.AthleteID, &doc.DocumentType, &categoryID, &doc.FileName, &doc.FilePath, &doc.FileURL,
-			&doc.ValidationStatus, &doc.ExpiryDate, &doc.UploadedAt, &notes, &rejectionReason,
+			&doc.ValidationStatus, &doc.ExpiryDate, &doc.UploadedAt, &notes, &rejectionReason, &mimeType,
 			&categoryID, &categoryName, &categoryDescription, &categoryColor, &categoryCreatedAt,
 		); err != nil {
 			return nil, err
@@ -184,6 +184,9 @@ func (r *DocumentRepository) GetByAthlete(athleteID int) ([]*models.Document, er
 		}
 		if rejectionReason.Valid {
 			doc.RejectionReason = rejectionReason.String
+		}
+		if mimeType.Valid {
+			doc.MimeType = mimeType.String
 		}
 
 		// Set category if exists
@@ -515,6 +518,44 @@ func (r *DocumentRepository) GetByID(id int) (*models.Document, error) {
 	d.Tags = tags
 
 	return d, nil
+}
+
+// Delete removes a document by ID
+func (r *DocumentRepository) Delete(id int) error {
+	// First delete any shares
+	_, err := r.db.Exec("DELETE FROM document_shares WHERE document_id = $1", id)
+	if err != nil {
+		// Ignore if table doesn't exist
+	}
+
+	// Delete any versions
+	_, err = r.db.Exec("DELETE FROM document_versions WHERE document_id = $1", id)
+	if err != nil {
+		// Ignore if table doesn't exist
+	}
+
+	// Delete document tags
+	_, err = r.db.Exec("DELETE FROM document_tags WHERE document_id = $1", id)
+	if err != nil {
+		// Ignore if table doesn't exist
+	}
+
+	// Finally delete the document
+	result, err := r.db.Exec("DELETE FROM documents WHERE id = $1", id)
+	if err != nil {
+		return fmt.Errorf("failed to delete document: %v", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("document not found")
+	}
+
+	return nil
 }
 
 // Validate approves a document

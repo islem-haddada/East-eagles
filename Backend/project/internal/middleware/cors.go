@@ -15,6 +15,11 @@ func CORS(next http.Handler) http.Handler {
 			"http://192.168.100.9:3000",
 		}
 
+		// Add production frontend URL from environment variable
+		if frontendURL := os.Getenv("FRONTEND_URL"); frontendURL != "" {
+			allowedOrigins = append(allowedOrigins, frontendURL)
+		}
+
 		// Check if origin is in allowed list or if we're in development mode
 		allowed := false
 		for _, allowedOrigin := range allowedOrigins {

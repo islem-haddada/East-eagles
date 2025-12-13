@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,12 +22,16 @@ import (
 
 type DocumentHandler struct {
 	repo              *repository.DocumentRepository
+	athleteRepo       *repository.AthleteRepository
+	userRepo          *repository.UserRepository
 	cloudinaryService *services.CloudinaryService
 }
 
-func NewDocumentHandler(repo *repository.DocumentRepository, cloudinaryService *services.CloudinaryService) *DocumentHandler {
+func NewDocumentHandler(repo *repository.DocumentRepository, athleteRepo *repository.AthleteRepository, userRepo *repository.UserRepository, cloudinaryService *services.CloudinaryService) *DocumentHandler {
 	return &DocumentHandler{
 		repo:              repo,
+		athleteRepo:       athleteRepo,
+		userRepo:          userRepo,
 		cloudinaryService: cloudinaryService,
 	}
 }
@@ -82,23 +88,36 @@ func (h *DocumentHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Create unique filename
-	// Append .txt to PDFs to bypass Cloudinary's "PDF as Image" restriction which causes 401 errors
-	// The backend Download handler will serve it with the correct Content-Type and Filename.
-	safeFilename := handler.Filename
-	if handler.Header.Get("Content-Type") == "application/pdf" || strings.HasSuffix(strings.ToLower(handler.Filename), ".pdf") {
-		safeFilename += ".txt"
-	}
-	filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), safeFilename)
-	folderPath := fmt.Sprintf("east-eagles/documents/athlete_%d", athleteID)
+	// Create unique filename - simplified, no extension modifications
+	filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), handler.Filename)
 
-	// Upload to Cloudinary
-	// Use "raw" resource type to avoid issues with PDFs being treated as images (double extension, 401 errors)
-	fileURL, err := h.cloudinaryService.UploadDocument(file, filename, folderPath, "raw")
-	if err != nil {
-		http.Error(w, "Error uploading file to cloud storage: "+err.Error(), http.StatusInternalServerError)
+	// Save file locally instead of Cloudinary (Cloudinary blocks PDFs on free tier)
+	uploadDir := fmt.Sprintf("uploads/documents/athlete_%d", athleteID)
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		log.Printf("❌ Failed to create upload directory: %v", err)
+		http.Error(w, "Error creating upload directory", http.StatusInternalServerError)
 		return
 	}
+
+	filePath := fmt.Sprintf("%s/%s", uploadDir, filename)
+	dst, err := os.Create(filePath)
+	if err != nil {
+		log.Printf("❌ Failed to create file: %v", err)
+		http.Error(w, "Error saving file", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	// Copy file content
+	if _, err := io.Copy(dst, file); err != nil {
+		log.Printf("❌ Failed to write file: %v", err)
+		http.Error(w, "Error writing file", http.StatusInternalServerError)
+		return
+	}
+
+	// Use local file path as URL (will be served by download handler)
+	fileURL := filePath
+	log.Printf("✅ Upload successful: saved to %s", filePath)
 
 	// Create document record
 	doc := &models.Document{
@@ -329,14 +348,33 @@ func (h *DocumentHandler) GetMyDocuments(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// For athletes, user ID equals athlete ID since they share the same ID
-	// (based on the database schema where users table has user data)
-	athleteID := userID
+	// Get user to find their email
+	user, err := h.userRepo.GetByID(userID)
+	if err != nil {
+		log.Printf("Error getting user %d: %v", userID, err)
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
 
-	docs, err := h.repo.GetByAthlete(athleteID)
+	// Get athlete by email
+	athlete, err := h.athleteRepo.GetByEmail(user.Email)
+	if err != nil {
+		log.Printf("Athlete with email %s not found: %v", user.Email, err)
+		// Return empty array instead of error for new athletes
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]*models.Document{})
+		return
+	}
+
+	docs, err := h.repo.GetByAthlete(athlete.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Return empty array if nil
+	if docs == nil {
+		docs = []*models.Document{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -353,6 +391,112 @@ func (h *DocumentHandler) GetPending(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(docs)
+}
+
+// Delete removes a document by ID
+func (h *DocumentHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid document ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get the document first to check ownership and get file path
+	doc, err := h.repo.GetByID(id)
+	if err != nil {
+		http.Error(w, "Document not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete local file if exists
+	if doc.FileURL != "" && strings.HasPrefix(doc.FileURL, "uploads/") {
+		if err := os.Remove(doc.FileURL); err != nil {
+			log.Printf("Warning: could not delete local file %s: %v", doc.FileURL, err)
+		}
+	}
+
+	// Delete from database
+	if err := h.repo.Delete(id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("✅ Document ID=%d deleted successfully", id)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Document deleted successfully"})
+}
+
+// DeleteMyDocument removes a document by ID (athlete can only delete their own documents)
+func (h *DocumentHandler) DeleteMyDocument(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid document ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get user ID from context
+	userID, ok := r.Context().Value(middleware.UserIDKey).(int)
+	if !ok {
+		log.Printf("❌ DeleteMyDocument: userID not found in context")
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	log.Printf("🔍 DeleteMyDocument: userID=%d, docID=%d", userID, id)
+
+	// Get user to find athlete by email
+	user, err := h.userRepo.GetByID(userID)
+	if err != nil {
+		log.Printf("❌ DeleteMyDocument: user not found for userID=%d: %v", userID, err)
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	log.Printf("🔍 DeleteMyDocument: user email=%s", user.Email)
+
+	// Find athlete by email
+	athlete, err := h.athleteRepo.GetByEmail(user.Email)
+	if err != nil {
+		log.Printf("❌ DeleteMyDocument: athlete not found for email=%s: %v", user.Email, err)
+		http.Error(w, "Athlete not found", http.StatusNotFound)
+		return
+	}
+	log.Printf("🔍 DeleteMyDocument: athlete ID=%d", athlete.ID)
+
+	// Get the document first to check ownership
+	doc, err := h.repo.GetByID(id)
+	if err != nil {
+		log.Printf("❌ DeleteMyDocument: document not found for id=%d: %v", id, err)
+		http.Error(w, "Document not found", http.StatusNotFound)
+		return
+	}
+	log.Printf("🔍 DeleteMyDocument: doc.AthleteID=%d, athlete.ID=%d", doc.AthleteID, athlete.ID)
+
+	// Check if this document belongs to the athlete
+	if doc.AthleteID != athlete.ID {
+		log.Printf("❌ DeleteMyDocument: ownership mismatch doc.AthleteID=%d != athlete.ID=%d", doc.AthleteID, athlete.ID)
+		http.Error(w, "You can only delete your own documents", http.StatusForbidden)
+		return
+	}
+
+	// Delete local file if exists
+	if doc.FileURL != "" && strings.HasPrefix(doc.FileURL, "uploads/") {
+		if err := os.Remove(doc.FileURL); err != nil {
+			log.Printf("Warning: could not delete local file %s: %v", doc.FileURL, err)
+		}
+	}
+
+	// Delete from database
+	if err := h.repo.Delete(id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("✅ Document ID=%d deleted by athlete ID=%d", id, athlete.ID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Document deleted successfully"})
 }
 
 // GetExpiring returns documents expiring within 30 days (admin only)
@@ -531,30 +675,191 @@ func (h *DocumentHandler) Download(w http.ResponseWriter, r *http.Request) {
 
 	doc, err := h.repo.GetByID(id)
 	if err != nil {
+		log.Printf("❌ Document not found: %v", err)
 		http.Error(w, "Document not found", http.StatusNotFound)
 		return
 	}
 
-	// Check permissions (similar to GetByAthlete)
+	log.Printf("📥 Downloading document ID=%d, FileURL=%s", doc.ID, doc.FileURL)
 
-	// Proxy the file download
-	// Fetch from Cloudinary (which might be a .txt file to bypass restrictions)
-	resp, err := http.Get(doc.FileURL)
+	// Check if FileURL is empty
+	if doc.FileURL == "" {
+		log.Printf("❌ FileURL is empty for document ID=%d", doc.ID)
+		http.Error(w, "Document file URL not found", http.StatusNotFound)
+		return
+	}
+
+	// Check if it's a local file (not a URL)
+	if !strings.HasPrefix(doc.FileURL, "http") {
+		// Local file - serve directly
+		localFile, err := os.Open(doc.FileURL)
+		if err != nil {
+			log.Printf("❌ Error opening local file: %v", err)
+			http.Error(w, "Document file not found", http.StatusNotFound)
+			return
+		}
+		defer localFile.Close()
+
+		// Get file info for size
+		fileInfo, err := localFile.Stat()
+		if err != nil {
+			log.Printf("❌ Error getting file info: %v", err)
+			http.Error(w, "Error reading document", http.StatusInternalServerError)
+			return
+		}
+
+		// Set headers
+		w.Header().Set("Content-Type", doc.MimeType)
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", doc.FileName))
+		w.Header().Set("Content-Length", strconv.FormatInt(fileInfo.Size(), 10))
+
+		// Stream file
+		bytesWritten, err := io.Copy(w, localFile)
+		if err != nil {
+			log.Printf("❌ Error streaming local file: %v", err)
+		} else {
+			log.Printf("✅ Downloaded %d bytes for document ID=%d (local)", bytesWritten, doc.ID)
+		}
+		return
+	}
+
+	// Remote URL (Cloudinary) - proxy download
+	downloadURL := doc.FileURL
+
+	// Add fl_attachment flag to Cloudinary URL to enable PDF download
+	if strings.Contains(downloadURL, "cloudinary.com") && strings.Contains(downloadURL, "/upload/") {
+		downloadURL = strings.Replace(downloadURL, "/upload/", "/upload/fl_attachment/", 1)
+		log.Printf("🔧 Added fl_attachment to URL: %s", downloadURL)
+	}
+
+	// Proxy the file download from Cloudinary
+	resp, err := http.Get(downloadURL)
 	if err != nil {
+		log.Printf("❌ Error fetching from Cloudinary: %v", err)
 		http.Error(w, "Error fetching document", http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
 
+	log.Printf("📦 Cloudinary response: Status=%d, ContentLength=%d", resp.StatusCode, resp.ContentLength)
+
+	// Check if Cloudinary returned an error
+	if resp.StatusCode != 200 {
+		log.Printf("❌ Cloudinary returned status %d", resp.StatusCode)
+		http.Error(w, "Error fetching document from storage", http.StatusBadGateway)
+		return
+	}
+
 	// Set headers
 	w.Header().Set("Content-Type", doc.MimeType)
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", doc.FileName))
-	w.Header().Set("Content-Length", strconv.FormatInt(resp.ContentLength, 10))
+	if resp.ContentLength > 0 {
+		w.Header().Set("Content-Length", strconv.FormatInt(resp.ContentLength, 10))
+	}
 
 	// Stream body
-	if _, err := io.Copy(w, resp.Body); err != nil {
-		// Can't send error header if body started writing, but log it
-		fmt.Printf("Error streaming file: %v\n", err)
+	bytesWritten, err := io.Copy(w, resp.Body)
+	if err != nil {
+		log.Printf("❌ Error streaming file: %v", err)
+	} else {
+		log.Printf("✅ Downloaded %d bytes for document ID=%d", bytesWritten, doc.ID)
+	}
+}
+
+// Preview serves the document file inline for browser viewing (no download)
+func (h *DocumentHandler) Preview(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	doc, err := h.repo.GetByID(id)
+	if err != nil {
+		log.Printf("❌ Document not found: %v", err)
+		http.Error(w, "Document not found", http.StatusNotFound)
+		return
+	}
+
+	log.Printf("👁️ Previewing document ID=%d, FileURL=%s, MimeType=%s", doc.ID, doc.FileURL, doc.MimeType)
+
+	// Check if FileURL is empty
+	if doc.FileURL == "" {
+		log.Printf("❌ FileURL is empty for document ID=%d", doc.ID)
+		http.Error(w, "Document file URL not found", http.StatusNotFound)
+		return
+	}
+
+	// Check if it's a local file (not a URL)
+	if !strings.HasPrefix(doc.FileURL, "http") {
+		// Local file - serve directly
+		localFile, err := os.Open(doc.FileURL)
+		if err != nil {
+			log.Printf("❌ Error opening local file: %v", err)
+			http.Error(w, "Document file not found", http.StatusNotFound)
+			return
+		}
+		defer localFile.Close()
+
+		// Get file info for size
+		fileInfo, err := localFile.Stat()
+		if err != nil {
+			log.Printf("❌ Error getting file info: %v", err)
+			http.Error(w, "Error reading document", http.StatusInternalServerError)
+			return
+		}
+
+		// Set headers for inline viewing (not download)
+		w.Header().Set("Content-Type", doc.MimeType)
+		w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", doc.FileName))
+		w.Header().Set("Content-Length", strconv.FormatInt(fileInfo.Size(), 10))
+
+		// Stream file
+		bytesWritten, err := io.Copy(w, localFile)
+		if err != nil {
+			log.Printf("❌ Error streaming local file: %v", err)
+		} else {
+			log.Printf("✅ Previewed %d bytes for document ID=%d (local)", bytesWritten, doc.ID)
+		}
+		return
+	}
+
+	// Remote URL (Cloudinary) - DO NOT add fl_attachment for preview
+	previewURL := doc.FileURL
+	log.Printf("🔗 Fetching from Cloudinary for preview: %s", previewURL)
+
+	// Proxy the file from Cloudinary
+	resp, err := http.Get(previewURL)
+	if err != nil {
+		log.Printf("❌ Error fetching from Cloudinary: %v", err)
+		http.Error(w, "Error fetching document", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	log.Printf("📦 Cloudinary response: Status=%d, ContentLength=%d", resp.StatusCode, resp.ContentLength)
+
+	// Check if Cloudinary returned an error
+	if resp.StatusCode != 200 {
+		log.Printf("❌ Cloudinary returned status %d", resp.StatusCode)
+		http.Error(w, "Error fetching document from storage", http.StatusBadGateway)
+		return
+	}
+
+	// Set headers for inline viewing
+	w.Header().Set("Content-Type", doc.MimeType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", doc.FileName))
+	if resp.ContentLength > 0 {
+		w.Header().Set("Content-Length", strconv.FormatInt(resp.ContentLength, 10))
+	}
+
+	// Stream body
+	bytesWritten, err := io.Copy(w, resp.Body)
+	if err != nil {
+		log.Printf("❌ Error streaming file: %v", err)
+	} else {
+		log.Printf("✅ Previewed %d bytes for document ID=%d", bytesWritten, doc.ID)
 	}
 }
 

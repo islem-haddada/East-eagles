@@ -65,7 +65,7 @@ func main() {
 	athleteHandler := handlers.NewAthleteHandler(athleteRepo, cloudinaryService)
 	authHandler := handlers.NewAuthHandler(authService)
 	trainingHandler := handlers.NewTrainingHandler(trainingRepo)
-	documentHandler := handlers.NewDocumentHandler(documentRepo, cloudinaryService)
+	documentHandler := handlers.NewDocumentHandler(documentRepo, athleteRepo, userRepo, cloudinaryService)
 	// eventHandler := handlers.NewEventHandler(eventRepo)
 	// announcementHandler := handlers.NewAnnouncementHandler(announcementRepo)
 
@@ -118,8 +118,9 @@ func main() {
 	// Protected routes (Apply AuthMiddleware)
 	api.Use(middleware.AuthMiddleware(authService))
 
-	// Document Download (Protected via Query Param or Header)
+	// Document Download & Preview (Protected via Query Param or Header)
 	api.HandleFunc("/documents/{id}/download", documentHandler.Download).Methods("GET")
+	api.HandleFunc("/documents/{id}/preview", documentHandler.Preview).Methods("GET")
 
 	api.HandleFunc("/auth/me", authHandler.Me).Methods("GET")
 	api.HandleFunc("/athletes/profile", athleteHandler.GetProfile).Methods("GET")
@@ -159,6 +160,7 @@ func main() {
 	admin.HandleFunc("/documents/{id}/share", documentHandler.ShareDocument).Methods("POST")
 	admin.HandleFunc("/documents/{id}/shares", documentHandler.GetShares).Methods("GET")
 	admin.HandleFunc("/documents/{id}/unshare", documentHandler.UnshareDocument).Methods("POST")
+	admin.HandleFunc("/documents/{id}", documentHandler.Delete).Methods("DELETE")
 
 	// General document routes
 	admin.HandleFunc("/documents/pending", documentHandler.GetPending).Methods("GET")
@@ -199,6 +201,7 @@ func main() {
 	// Document Upload (Athlete)
 	api.HandleFunc("/documents/upload", documentHandler.Upload).Methods("POST")
 	api.HandleFunc("/documents/my", documentHandler.GetMyDocuments).Methods("GET")
+	api.HandleFunc("/documents/{id}", documentHandler.DeleteMyDocument).Methods("DELETE")
 
 	// Démarrer le serveur
 	port := os.Getenv("PORT")
