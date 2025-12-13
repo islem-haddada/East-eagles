@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { athleteAPI, documentAPI, paymentAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
@@ -7,6 +8,8 @@ import './Profile.css';
 const Profile = () => {
     const { user } = useAuth();
     const notify = useNotification();
+    const { t } = useTranslation();
+
     const [athlete, setAthlete] = useState(null);
     const [documents, setDocuments] = useState([]);
     const [payments, setPayments] = useState([]);
@@ -71,10 +74,10 @@ const Profile = () => {
             const res = await athleteAPI.updateProfile(dataToSend);
             setAthlete(res.data);
             setIsEditing(false);
-            notify.success('Profil mis à jour avec succès');
+            notify.success(t('common.success'));
         } catch (error) {
             console.error("Error updating profile", error);
-            notify.error('Erreur lors de la mise à jour du profil');
+            notify.error(t('common.error'));
         }
     };
 
@@ -108,7 +111,7 @@ const Profile = () => {
 
         try {
             await documentAPI.upload(formData);
-            notify.success('Document téléversé avec succès');
+            notify.success(t('common.success'));
             setUploadForm({
                 document_type: 'medical_certificate',
                 notes: '',
@@ -120,14 +123,14 @@ const Profile = () => {
             fetchData(); // Refresh list
         } catch (error) {
             console.error("Upload error", error);
-            notify.error('Erreur lors du téléversement');
+            notify.error(t('common.error'));
         } finally {
             setUploading(false);
         }
     };
 
-    if (loading) return <div className="loading-spinner">Chargement...</div>;
-    if (!athlete) return <div className="error-message">Profil introuvable.</div>;
+    if (loading) return <div className="loading-spinner">{t('common.loading')}</div>;
+    if (!athlete) return <div className="error-message">{t('common.error')}</div>;
 
     return (
         <div className="profile-page">
@@ -139,10 +142,10 @@ const Profile = () => {
                             className="hero-avatar"
                             onClick={() => document.getElementById('profileImageInput').click()}
                             style={{
-                                backgroundImage: athlete.profile_image ? `url(${athlete.profile_image})` : 'none',
+                                backgroundImage: athlete.photo_url ? `url(${athlete.photo_url})` : 'none',
                             }}
                         >
-                            {!athlete.profile_image && athlete.first_name && athlete.last_name && `${athlete.first_name[0]}${athlete.last_name[0]}`}
+                            {!athlete.photo_url && athlete.first_name && athlete.last_name && `${athlete.first_name[0]}${athlete.last_name[0]}`}
                             <div className="hero-avatar-overlay">
                                 <span>📷</span>
                             </div>
@@ -157,13 +160,13 @@ const Profile = () => {
                                     const formData = new FormData();
                                     formData.append('file', e.target.files[0]);
                                     try {
-                                        notify.info('Téléversement en cours...');
+                                        notify.info(t('common.loading'));
                                         const res = await athleteAPI.uploadProfileImage(formData);
                                         setAthlete(res.data);
-                                        notify.success('Photo de profil mise à jour');
+                                        notify.success(t('common.success'));
                                     } catch (error) {
                                         console.error(error);
-                                        notify.error('Erreur lors du téléversement');
+                                        notify.error(t('common.error'));
                                     }
                                 }
                             }}
@@ -179,11 +182,11 @@ const Profile = () => {
                     <div className="hero-stats">
                         <div className="stat-item">
                             <span className="stat-value">{documents.length}</span>
-                            <span className="stat-label">Documents</span>
+                            <span className="stat-label">{t('profile.documents')}</span>
                         </div>
                         <div className="stat-item">
                             <span className="stat-value">{payments.length}</span>
-                            <span className="stat-label">Paiements</span>
+                            <span className="stat-label">{t('profile.payments')}</span>
                         </div>
                     </div>
                 </div>
@@ -195,19 +198,19 @@ const Profile = () => {
                     className={`tab-btn ${activeTab === 'info' ? 'active' : ''}`}
                     onClick={() => setActiveTab('info')}
                 >
-                    Informations
+                    {t('profile.personal_info')}
                 </button>
                 <button
                     className={`tab-btn ${activeTab === 'documents' ? 'active' : ''}`}
                     onClick={() => setActiveTab('documents')}
                 >
-                    Documents
+                    {t('profile.documents')}
                 </button>
                 <button
                     className={`tab-btn ${activeTab === 'payments' ? 'active' : ''}`}
                     onClick={() => setActiveTab('payments')}
                 >
-                    Paiements
+                    {t('profile.payments')}
                 </button>
             </div>
 
@@ -217,7 +220,7 @@ const Profile = () => {
                     <div className="tab-pane fade-in">
                         <div className="card info-card">
                             <div className="card-header">
-                                <h2>Informations Personnelles</h2>
+                                <h2>{t('profile.personal_info')}</h2>
                                 <button className="btn-icon" onClick={() => setIsEditing(!isEditing)}>
                                     {isEditing ? '✕' : '✎'}
                                 </button>
@@ -227,23 +230,23 @@ const Profile = () => {
                                 <form onSubmit={handleSaveProfile} className="edit-profile-form">
                                     <div className="form-grid">
                                         <div className="form-group">
-                                            <label>Prénom</label>
+                                            <label>{t('profile.labels.firstname')}</label>
                                             <input type="text" name="first_name" value={editForm.first_name || ''} onChange={handleEditChange} />
                                         </div>
                                         <div className="form-group">
-                                            <label>Nom</label>
+                                            <label>{t('profile.labels.lastname')}</label>
                                             <input type="text" name="last_name" value={editForm.last_name || ''} onChange={handleEditChange} />
                                         </div>
                                         <div className="form-group">
-                                            <label>Email</label>
+                                            <label>{t('profile.labels.email')}</label>
                                             <input type="email" value={athlete.email} disabled className="input-disabled" />
                                         </div>
                                         <div className="form-group">
-                                            <label>Date de Naissance</label>
+                                            <label>{t('profile.labels.dob')}</label>
                                             <input type="date" name="birth_date" value={editForm.birth_date ? editForm.birth_date.split('T')[0] : ''} onChange={handleEditChange} />
                                         </div>
                                         <div className="form-group">
-                                            <label>Sexe</label>
+                                            <label>{t('profile.labels.gender')}</label>
                                             <select name="gender" value={editForm.gender || ''} onChange={handleEditChange}>
                                                 <option value="">Sélectionner</option>
                                                 <option value="male">Masculin</option>
@@ -251,23 +254,23 @@ const Profile = () => {
                                             </select>
                                         </div>
                                         <div className="form-group">
-                                            <label>Téléphone</label>
+                                            <label>{t('profile.labels.phone')}</label>
                                             <input type="text" name="phone" value={editForm.phone || ''} onChange={handleEditChange} />
                                         </div>
                                         <div className="form-group full-width">
-                                            <label>Adresse</label>
+                                            <label>{t('profile.labels.address')}</label>
                                             <input type="text" name="address" value={editForm.address || ''} onChange={handleEditChange} />
                                         </div>
                                         <div className="form-group">
-                                            <label>Poids (kg)</label>
+                                            <label>{t('profile.labels.weight')}</label>
                                             <input type="number" name="weight" value={editForm.weight || ''} onChange={handleEditChange} />
                                         </div>
                                         <div className="form-group">
-                                            <label>Taille (cm)</label>
+                                            <label>{t('profile.labels.height')}</label>
                                             <input type="number" name="height" value={editForm.height || ''} onChange={handleEditChange} />
                                         </div>
                                         <div className="form-group">
-                                            <label>Groupe Sanguin</label>
+                                            <label>{t('profile.labels.blood_type')}</label>
                                             <select name="blood_type" value={editForm.blood_type || ''} onChange={handleEditChange}>
                                                 <option value="">Sélectionner</option>
                                                 <option value="A+">A+</option>
@@ -281,75 +284,75 @@ const Profile = () => {
                                             </select>
                                         </div>
                                         <div className="form-group full-width">
-                                            <label>Conditions Médicales</label>
-                                            <input type="text" name="medical_conditions" value={editForm.medical_conditions || ''} onChange={handleEditChange} placeholder="Ex: Asthme, Diabète..." />
+                                            <label>{t('profile.labels.medical')}</label>
+                                            <input type="text" name="medical_conditions" value={editForm.medical_conditions || ''} onChange={handleEditChange} />
                                         </div>
                                         <div className="form-group full-width">
-                                            <label>Allergies</label>
-                                            <input type="text" name="allergies" value={editForm.allergies || ''} onChange={handleEditChange} placeholder="Ex: Arachides, Pénicilline..." />
+                                            <label>{t('profile.labels.allergies')}</label>
+                                            <input type="text" name="allergies" value={editForm.allergies || ''} onChange={handleEditChange} />
                                         </div>
                                         <div className="form-group">
-                                            <label>Contact Urgence</label>
+                                            <label>{t('profile.labels.emergency_contact')}</label>
                                             <input type="text" name="emergency_contact_name" value={editForm.emergency_contact_name || ''} onChange={handleEditChange} />
                                         </div>
                                         <div className="form-group">
-                                            <label>Tél Urgence</label>
+                                            <label>{t('profile.labels.emergency_phone')}</label>
                                             <input type="text" name="emergency_contact_phone" value={editForm.emergency_contact_phone || ''} onChange={handleEditChange} />
                                         </div>
                                     </div>
                                     <div className="form-actions">
-                                        <button type="button" className="btn-secondary" onClick={() => setIsEditing(false)}>Annuler</button>
-                                        <button type="submit" className="btn-primary">Enregistrer</button>
+                                        <button type="button" className="btn-secondary" onClick={() => setIsEditing(false)}>{t('common.cancel')}</button>
+                                        <button type="submit" className="btn-primary">{t('common.save')}</button>
                                     </div>
                                 </form>
                             ) : (
                                 <div className="info-grid">
                                     <div className="info-item">
-                                        <span className="label">Email</span>
+                                        <span className="label">{t('profile.labels.email')}</span>
                                         <span className="value">{athlete.email}</span>
                                     </div>
                                     <div className="info-item">
-                                        <span className="label">Date de Naissance</span>
+                                        <span className="label">{t('profile.labels.dob')}</span>
                                         <span className="value">{athlete.birth_date ? new Date(athlete.birth_date).toLocaleDateString() : '-'}</span>
                                     </div>
                                     <div className="info-item">
-                                        <span className="label">Sexe</span>
+                                        <span className="label">{t('profile.labels.gender')}</span>
                                         <span className="value">{athlete.gender === 'male' ? 'Masculin' : athlete.gender === 'female' ? 'Féminin' : '-'}</span>
                                     </div>
                                     <div className="info-item">
-                                        <span className="label">Téléphone</span>
+                                        <span className="label">{t('profile.labels.phone')}</span>
                                         <span className="value">{athlete.phone || '-'}</span>
                                     </div>
                                     <div className="info-item full-width">
-                                        <span className="label">Adresse</span>
+                                        <span className="label">{t('profile.labels.address')}</span>
                                         <span className="value">{athlete.address || '-'}</span>
                                     </div>
                                     <div className="info-item">
-                                        <span className="label">Poids</span>
+                                        <span className="label">{t('profile.labels.weight')}</span>
                                         <span className="value">{athlete.weight ? `${athlete.weight} kg` : '-'}</span>
                                     </div>
                                     <div className="info-item">
-                                        <span className="label">Taille</span>
+                                        <span className="label">{t('profile.labels.height')}</span>
                                         <span className="value">{athlete.height ? `${athlete.height} cm` : '-'}</span>
                                     </div>
                                     <div className="info-item">
-                                        <span className="label">Groupe Sanguin</span>
+                                        <span className="label">{t('profile.labels.blood_type')}</span>
                                         <span className="value">{athlete.blood_type || '-'}</span>
                                     </div>
                                     <div className="info-item full-width">
-                                        <span className="label">Conditions Médicales</span>
+                                        <span className="label">{t('profile.labels.medical')}</span>
                                         <span className="value">{athlete.medical_conditions || '-'}</span>
                                     </div>
                                     <div className="info-item full-width">
-                                        <span className="label">Allergies</span>
+                                        <span className="label">{t('profile.labels.allergies')}</span>
                                         <span className="value">{athlete.allergies || '-'}</span>
                                     </div>
                                     <div className="info-item">
-                                        <span className="label">Contact Urgence</span>
+                                        <span className="label">{t('profile.labels.emergency_contact')}</span>
                                         <span className="value">{athlete.emergency_contact_name || '-'}</span>
                                     </div>
                                     <div className="info-item">
-                                        <span className="label">Tél Urgence</span>
+                                        <span className="label">{t('profile.labels.emergency_phone')}</span>
                                         <span className="value">{athlete.emergency_contact_phone || '-'}</span>
                                     </div>
                                 </div>
@@ -362,10 +365,10 @@ const Profile = () => {
                     <div className="tab-pane fade-in">
                         <div className="documents-layout">
                             <div className="card upload-card">
-                                <h3>📤 Nouveau Document</h3>
+                                <h3>📤 {t('profile.upload_document')}</h3>
                                 <form onSubmit={handleUpload}>
                                     <div className="form-group">
-                                        <label>Type</label>
+                                        <label>{t('profile.type')}</label>
                                         <select name="document_type" value={uploadForm.document_type} onChange={handleInputChange}>
                                             <option value="medical_certificate">Certificat Médical</option>
                                             <option value="photo">Photo d'identité</option>
@@ -375,19 +378,19 @@ const Profile = () => {
                                         </select>
                                     </div>
                                     <div className="form-group">
-                                        <label>Expiration</label>
+                                        <label>{t('profile.expiry')}</label>
                                         <input type="date" name="expiry_date" value={uploadForm.expiry_date} onChange={handleInputChange} />
                                     </div>
                                     <div className="form-group">
-                                        <label>Fichier</label>
+                                        <label>{t('profile.file')}</label>
                                         <input type="file" id="fileInput" onChange={handleFileChange} required className="file-input" />
                                     </div>
                                     <div className="form-group">
-                                        <label>Notes</label>
-                                        <input type="text" name="notes" value={uploadForm.notes} onChange={handleInputChange} placeholder="Optionnel" />
+                                        <label>{t('profile.notes')}</label>
+                                        <input type="text" name="notes" value={uploadForm.notes} onChange={handleInputChange} placeholder={t('common.optional')} />
                                     </div>
                                     <button type="submit" disabled={uploading} className="btn-primary full-width">
-                                        {uploading ? 'Envoi...' : 'Téléverser le document'}
+                                        {uploading ? t('common.loading') : t('profile.upload_btn')}
                                     </button>
                                 </form>
                             </div>
@@ -423,7 +426,7 @@ const Profile = () => {
                 {activeTab === 'payments' && (
                     <div className="tab-pane fade-in">
                         <div className="card">
-                            <h3>Historique des Paiements</h3>
+                            <h3>{t('profile.payments')}</h3>
                             <div className="table-responsive">
                                 <table className="modern-table">
                                     <thead>

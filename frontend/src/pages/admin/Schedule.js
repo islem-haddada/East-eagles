@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { scheduleAPI } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import './Schedule.css';
 
 const Schedule = () => {
+    const { t, i18n } = useTranslation();
     const notify = useNotification();
     const confirm = useConfirm();
     const [schedules, setSchedules] = useState([]);
@@ -31,14 +33,22 @@ const Schedule = () => {
         { value: 'Sunday', label: 'Dimanche', short: 'Dim' }
     ];
 
+    const getLocalizedDayLabel = (dayValue) => {
+        if (i18n.language === 'ar') {
+            const arLabels = {
+                'Monday': 'الاثنين', 'Tuesday': 'الثلاثاء', 'Wednesday': 'الأربعاء',
+                'Thursday': 'الخميس', 'Friday': 'الجمعة', 'Saturday': 'السبت', 'Sunday': 'الأحد'
+            };
+            return arLabels[dayValue] || dayValue;
+        }
+        const day = daysOfWeek.find(d => d.value === dayValue);
+        return day ? day.label : dayValue;
+    };
+
+
     const fetchSchedules = async () => {
         try {
             const res = await scheduleAPI.getAll();
-            console.log('🔍 API Response:', res.data);
-            if (res.data && res.data.length > 0) {
-                console.log('🔍 First schedule item:', res.data[0]);
-                console.log('🔍 Start time of first item:', res.data[0].start_time);
-            }
             setSchedules(res.data || []);
         } catch (error) {
             console.error("Error fetching schedules", error);
@@ -110,11 +120,11 @@ const Schedule = () => {
 
         if (hasConflict) {
             const confirmed = await confirm(
-                'Ce créneau chevauche une séance existante. Voulez-vous continuer quand même ?',
+                t('admin_schedule.conflict_msg'),
                 {
-                    title: 'Conflit détecté',
-                    confirmText: 'Continuer',
-                    cancelText: 'Annuler',
+                    title: t('admin_schedule.conflict_title'),
+                    confirmText: t('admin_schedule.continue'),
+                    cancelText: t('common.cancel'),
                     type: 'warning'
                 }
             );
@@ -129,27 +139,27 @@ const Schedule = () => {
 
             if (editId) {
                 await scheduleAPI.update(editId, data);
-                notify.success('Créneau modifié avec succès');
+                notify.success(t('common.success'));
             } else {
                 await scheduleAPI.create(data);
-                notify.success('Créneau ajouté avec succès');
+                notify.success(t('common.success'));
             }
 
             resetForm();
             fetchSchedules();
         } catch (error) {
             console.error("Save error:", error);
-            notify.error('Erreur lors de l\'enregistrement');
+            notify.error(t('common.error'));
         }
     };
 
     const handleDelete = async (id) => {
         const confirmed = await confirm(
-            'Êtes-vous sûr de vouloir supprimer ce créneau ?',
+            t('admin_schedule.confirm_delete') || 'Êtes-vous sûr ?',
             {
-                title: 'Supprimer le créneau',
-                confirmText: 'Supprimer',
-                cancelText: 'Annuler',
+                title: t('common.delete'),
+                confirmText: t('common.delete'),
+                cancelText: t('common.cancel'),
                 type: 'danger'
             }
         );
@@ -160,7 +170,7 @@ const Schedule = () => {
                 fetchSchedules();
             } catch (error) {
                 console.error("Delete error:", error);
-                notify.error('Erreur lors de la suppression');
+                notify.error(t('common.error'));
             }
         }
     };
@@ -170,16 +180,6 @@ const Schedule = () => {
             ...formData,
             [e.target.name]: e.target.value
         });
-    };
-
-    const getDayLabel = (dayValue) => {
-        const day = daysOfWeek.find(d => d.value === dayValue);
-        return day ? day.label : dayValue;
-    };
-
-    const getShortDayLabel = (dayValue) => {
-        const day = daysOfWeek.find(d => d.value === dayValue);
-        return day ? day.short : dayValue;
     };
 
     // Group schedules by day for calendar view
@@ -201,8 +201,8 @@ const Schedule = () => {
         <div className="schedule-page">
             <div className="page-header">
                 <div>
-                    <h1>Planning Hebdomadaire</h1>
-                    <p className="page-subtitle">{schedules.length} créneaux programmés</p>
+                    <h1>{t('admin_schedule.title')}</h1>
+                    <p className="page-subtitle">{schedules.length} {t('admin_schedule.slots_scheduled')}</p>
                 </div>
                 <div className="header-actions">
                     <div className="view-toggle">
@@ -210,31 +210,31 @@ const Schedule = () => {
                             className={`toggle-btn ${viewMode === 'calendar' ? 'active' : ''}`}
                             onClick={() => setViewMode('calendar')}
                         >
-                            📅 Calendrier
+                            📅 {t('admin_schedule.calendar_view')}
                         </button>
                         <button
                             className={`toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
                             onClick={() => setViewMode('list')}
                         >
-                            📋 Liste
+                            📋 {t('admin_schedule.list_view')}
                         </button>
                     </div>
                     <button onClick={() => {
                         if (showForm) resetForm();
                         else setShowForm(true);
                     }} className="btn-primary">
-                        {showForm ? 'Annuler' : '➕ Ajouter un Créneau'}
+                        {showForm ? t('common.cancel') : `➕ ${t('admin_schedule.add_slot')}`}
                     </button>
                 </div>
             </div>
 
             {showForm && (
                 <div className="schedule-form-card">
-                    <h3>{editId ? '✏️ Modifier le Créneau' : '➕ Nouveau Créneau Récurrent'}</h3>
+                    <h3>{editId ? `✏️ ${t('admin_schedule.edit_slot')}` : `➕ ${t('admin_schedule.new_slot')}`}</h3>
                     <form onSubmit={handleSubmit}>
                         <div className="form-row">
                             <div className="form-group">
-                                <label>Jour</label>
+                                <label>{t('admin_schedule.label_day')}</label>
                                 <select
                                     name="day_of_week"
                                     value={formData.day_of_week}
@@ -242,13 +242,13 @@ const Schedule = () => {
                                 >
                                     {daysOfWeek.map(day => (
                                         <option key={day.value} value={day.value}>
-                                            {day.label}
+                                            {getLocalizedDayLabel(day.value)}
                                         </option>
                                     ))}
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label>Heure de début</label>
+                                <label>{t('admin_schedule.label_start')}</label>
                                 <input
                                     type="time"
                                     name="start_time"
@@ -261,7 +261,7 @@ const Schedule = () => {
 
                         <div className="form-row">
                             <div className="form-group">
-                                <label>Titre</label>
+                                <label>{t('admin_schedule.label_title')}</label>
                                 <input
                                     type="text"
                                     name="title"
@@ -271,7 +271,7 @@ const Schedule = () => {
                                 />
                             </div>
                             <div className="form-group">
-                                <label>Durée (minutes)</label>
+                                <label>{t('admin_schedule.label_duration')}</label>
                                 <input
                                     type="number"
                                     name="duration_minutes"
@@ -285,7 +285,7 @@ const Schedule = () => {
                         </div>
 
                         <div className="form-group">
-                            <label>Lieu</label>
+                            <label>{t('admin_schedule.label_location')}</label>
                             <input
                                 type="text"
                                 name="location"
@@ -296,7 +296,7 @@ const Schedule = () => {
                         </div>
 
                         <button type="submit" className="btn-submit">
-                            {editId ? '💾 Modifier' : '➕ Ajouter au Planning'}
+                            {editId ? `💾 ${t('btn_modify') || t('common.save')}` : `➕ ${t('admin_schedule.btn_add')}`}
                         </button>
                     </form>
                 </div>
@@ -308,8 +308,8 @@ const Schedule = () => {
                         {daysOfWeek.map(day => (
                             <div key={day.value} className="day-column">
                                 <div className="day-header">
-                                    <div className="day-name">{day.label}</div>
-                                    <div className="day-count">{grouped[day.value].length} séance{grouped[day.value].length !== 1 ? 's' : ''}</div>
+                                    <div className="day-name">{getLocalizedDayLabel(day.value)}</div>
+                                    <div className="day-count">{grouped[day.value].length}</div>
                                 </div>
                                 <div className="day-slots">
                                     {grouped[day.value].length > 0 ? (
@@ -320,13 +320,13 @@ const Schedule = () => {
                                                 <div className="slot-location">📍 {slot.location}</div>
                                                 <div className="slot-duration">{slot.duration_minutes} min</div>
                                                 <div className="slot-actions">
-                                                    <button onClick={() => handleEdit(slot)} className="btn-edit" title="Modifier">✎</button>
-                                                    <button onClick={() => handleDelete(slot.id)} className="btn-delete" title="Supprimer">×</button>
+                                                    <button onClick={() => handleEdit(slot)} className="btn-edit" title={t('common.edit')}>✎</button>
+                                                    <button onClick={() => handleDelete(slot.id)} className="btn-delete" title={t('common.delete')}>×</button>
                                                 </div>
                                             </div>
                                         ))
                                     ) : (
-                                        <div className="empty-day">Aucune séance</div>
+                                        <div className="empty-day">{t('admin_schedule.empty_day')}</div>
                                     )}
                                 </div>
                             </div>
@@ -338,10 +338,10 @@ const Schedule = () => {
                     {schedules.map(slot => (
                         <div key={slot.id} className="schedule-card">
                             <div className="schedule-header">
-                                <span className="day-badge">{getDayLabel(slot.day_of_week)}</span>
+                                <span className="day-badge">{getLocalizedDayLabel(slot.day_of_week)}</span>
                                 <div className="card-actions">
-                                    <button onClick={() => handleEdit(slot)} className="btn-edit" title="Modifier">✎</button>
-                                    <button onClick={() => handleDelete(slot.id)} className="btn-delete" title="Supprimer">×</button>
+                                    <button onClick={() => handleEdit(slot)} className="btn-edit" title={t('common.edit')}>✎</button>
+                                    <button onClick={() => handleDelete(slot.id)} className="btn-delete" title={t('common.delete')}>×</button>
                                 </div>
                             </div>
                             <div className="schedule-time">
@@ -352,7 +352,7 @@ const Schedule = () => {
                         </div>
                     ))}
                     {schedules.length === 0 && (
-                        <div className="no-schedule">Aucun créneau défini.</div>
+                        <div className="no-schedule">{t('admin_schedule.no_schedule')}</div>
                     )}
                 </div>
             )}

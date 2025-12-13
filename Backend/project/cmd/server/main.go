@@ -18,6 +18,11 @@ import (
 
 func main() {
 	// Charger les variables d'environnement
+	// Try loading local.env first (for credentials when .env is ignored)
+	if err := godotenv.Load("local.env"); err != nil {
+		log.Println("Note: local.env not found or error loading")
+	}
+
 	if err := godotenv.Load(); err != nil {
 		log.Println("Pas de fichier .env trouvé")
 	}

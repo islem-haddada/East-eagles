@@ -1,42 +1,56 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { documentAPI, athleteAPI } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import './Documents.css';
 
-const REQUIRED_DOCUMENTS = [
-    { type: 'medical_certificate', label: 'Certificat Médical' },
-    { type: 'insurance', label: 'Assurance Sportive' },
-    { type: 'id_card', label: 'Carte d\'Identité' },
-    { type: 'photo', label: 'Photo d\'Identité' },
-    { type: 'parental_consent', label: 'Autorisation Parentale (Mineurs)' }
-];
-
 const Documents = () => {
+    const { t, i18n } = useTranslation();
     const notify = useNotification();
     const confirm = useConfirm();
 
+    const locale = i18n.language === 'ar' ? 'ar-EG' : 'fr-FR';
+
+    // Required Documents list
+    const REQUIRED_DOCUMENTS = [
+        { type: 'medical_certificate', labelKey: 'doc_medical_certificate' },
+        { type: 'insurance', labelKey: 'doc_insurance' },
+        { type: 'id_card', labelKey: 'doc_id_card' },
+        { type: 'identity_card', labelKey: 'doc_id_card' }, // Legacy
+        { type: 'photo', labelKey: 'doc_photo' },
+        { type: 'parental_consent', labelKey: 'doc_parental_consent' }
+    ];
+
+    const getDocumentLabel = (type) => {
+        const found = REQUIRED_DOCUMENTS.find(d => d.type === type);
+        if (found) {
+            return t(`admin_documents.${found.labelKey}`);
+        }
+        return type.replace(/_/g, ' ');
+    };
+
     // State
-    const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'expiring', 'expired', 'archives', or 'search'
-    const [documents, setDocuments] = useState([]); // Pending documents
-    const [expiringDocuments, setExpiringDocuments] = useState([]); // Expiring documents
-    const [expiredDocuments, setExpiredDocuments] = useState([]); // Expired documents
-    const [athletes, setAthletes] = useState([]); // All athletes for archives
-    const [categories, setCategories] = useState([]); // Document categories
-    const [tags, setTags] = useState([]); // Document tags
-    const [selectedAthlete, setSelectedAthlete] = useState(null); // Selected athlete for folder view
-    const [athleteDocuments, setAthleteDocuments] = useState([]); // Documents for selected athlete
+    const [activeTab, setActiveTab] = useState('pending');
+    const [documents, setDocuments] = useState([]);
+    const [expiringDocuments, setExpiringDocuments] = useState([]);
+    const [expiredDocuments, setExpiredDocuments] = useState([]);
+    const [athletes, setAthletes] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [tags, setTags] = useState([]);
+    const [selectedAthlete, setSelectedAthlete] = useState(null);
+    const [athleteDocuments, setAthleteDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // Advanced Features State
-    const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'approved', 'rejected', 'pending'
-    const [filterCategory, setFilterCategory] = useState('all'); // Filter by category
-    const [filterTags, setFilterTags] = useState([]); // Filter by tags
-    const [previewDoc, setPreviewDoc] = useState(null); // Document to preview
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterCategory, setFilterCategory] = useState('all');
+    const [filterTags, setFilterTags] = useState([]);
+    const [previewDoc, setPreviewDoc] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [sortOrder, setSortOrder] = useState('name_asc');
-    const [searchResults, setSearchResults] = useState([]); // Search results
-    const [showSearchView, setShowSearchView] = useState(false); // Whether to show search view
+    const [searchResults, setSearchResults] = useState([]);
+    const [showSearchView, setShowSearchView] = useState(false);
 
     // Upload State
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -47,7 +61,7 @@ const Documents = () => {
     const [uploadTags, setUploadTags] = useState([]);
     const [uploadExpiryDate, setUploadExpiryDate] = useState('');
     const [uploadNotes, setUploadNotes] = useState('');
-    
+
     // Bulk upload state
     const [bulkSelectedAthletes, setBulkSelectedAthletes] = useState([]);
     const [bulkFiles, setBulkFiles] = useState({});
@@ -64,7 +78,7 @@ const Documents = () => {
     const [versionModalOpen, setVersionModalOpen] = useState(false);
     const [newVersionFile, setNewVersionFile] = useState(null);
     const [newVersionNotes, setNewVersionNotes] = useState('');
-    
+
     // Sharing State
     const [shareModalOpen, setShareModalOpen] = useState(false);
     const [documentShares, setDocumentShares] = useState([]);
@@ -97,28 +111,26 @@ const Documents = () => {
         try {
             setLoading(true);
             await documentAPI.upload(formData);
-            notify.success('Document ajouté avec succès');
+            notify.success(t('common.success'));
             setUploadModalOpen(false);
             setUploadFile(null);
             setUploadCategory('');
             setUploadTags([]);
             setUploadExpiryDate('');
             setUploadNotes('');
-            // Refresh documents
             fetchAthleteDocuments(selectedAthlete.id);
         } catch (error) {
             console.error("Upload error", error);
-            notify.error("Erreur lors de l'upload");
+            notify.error(t('common.error'));
         } finally {
             setLoading(false);
         }
     };
 
-    // Handle bulk upload
     const handleBulkUpload = async (e) => {
         e.preventDefault();
         if (bulkSelectedAthletes.length === 0 || Object.keys(bulkFiles).length === 0) {
-            notify.error("Veuillez sélectionner au moins un athlète et un fichier");
+            notify.error(t('admin_documents.msg_select_athlete_file'));
             return;
         }
 
@@ -134,12 +146,10 @@ const Documents = () => {
         if (bulkExpiryDate) {
             formData.append('expiry_date', bulkExpiryDate);
         }
-        
-        // Add athlete IDs
+
         const athleteIds = bulkSelectedAthletes.map(a => a.id).join(',');
         formData.append('athlete_ids', athleteIds);
-        
-        // Add files
+
         Object.keys(bulkFiles).forEach(athleteId => {
             formData.append(`file_${athleteId}`, bulkFiles[athleteId]);
         });
@@ -148,19 +158,18 @@ const Documents = () => {
             setLoading(true);
             const response = await documentAPI.uploadBulk(formData);
             const results = response.data;
-            
-            // Count successes and failures
+
             const successCount = results.filter(r => !r.error).length;
             const errorCount = results.filter(r => r.error).length;
-            
+
             if (successCount > 0) {
-                notify.success(`${successCount} document(s) ajouté(s) avec succès`);
+                notify.success(t('admin_documents.msg_bulk_success', { count: successCount }));
             }
-            
+
             if (errorCount > 0) {
-                notify.error(`${errorCount} document(s) n'ont pas pu être ajoutés`);
+                notify.error(t('admin_documents.msg_bulk_error', { count: errorCount }));
             }
-            
+
             setBulkUploadModalOpen(false);
             setBulkSelectedAthletes([]);
             setBulkFiles({});
@@ -168,20 +177,18 @@ const Documents = () => {
             setBulkTags([]);
             setBulkExpiryDate('');
             setBulkNotes('');
-            
-            // Refresh documents if needed
+
             if (activeTab === 'pending') {
                 fetchPendingDocuments();
             }
         } catch (error) {
             console.error("Bulk upload error", error);
-            notify.error("Erreur lors de l'upload en masse");
+            notify.error(t('admin_documents.msg_bulk_fail'));
         } finally {
             setLoading(false);
         }
     };
 
-    // Fetch pending documents
     const fetchPendingDocuments = async () => {
         try {
             setLoading(true);
@@ -189,13 +196,12 @@ const Documents = () => {
             setDocuments(response.data || []);
         } catch (error) {
             console.error("Error fetching pending documents", error);
-            notify.error("Erreur lors du chargement des documents");
+            notify.error(t('common.error'));
         } finally {
             setLoading(false);
         }
     };
 
-    // Fetch expiring documents
     const fetchExpiringDocuments = async () => {
         try {
             setLoading(true);
@@ -203,13 +209,12 @@ const Documents = () => {
             setExpiringDocuments(response.data || []);
         } catch (error) {
             console.error("Error fetching expiring documents", error);
-            notify.error("Erreur lors du chargement des documents expirant bientôt");
+            notify.error(t('common.error'));
         } finally {
             setLoading(false);
         }
     };
 
-    // Fetch expired documents
     const fetchExpiredDocuments = async () => {
         try {
             setLoading(true);
@@ -217,13 +222,12 @@ const Documents = () => {
             setExpiredDocuments(response.data || []);
         } catch (error) {
             console.error("Error fetching expired documents", error);
-            notify.error("Erreur lors du chargement des documents expirés");
+            notify.error(t('common.error'));
         } finally {
             setLoading(false);
         }
     };
 
-    // Fetch all athletes for archives
     const fetchAthletes = async () => {
         try {
             setLoading(true);
@@ -231,13 +235,12 @@ const Documents = () => {
             setAthletes(response.data || []);
         } catch (error) {
             console.error("Error fetching athletes", error);
-            notify.error("Erreur lors du chargement des athlètes");
+            notify.error(t('common.error'));
         } finally {
             setLoading(false);
         }
     };
 
-    // Fetch document categories
     const fetchCategories = async () => {
         try {
             const response = await documentAPI.getCategories();
@@ -247,7 +250,6 @@ const Documents = () => {
         }
     };
 
-    // Fetch document tags
     const fetchTags = async () => {
         try {
             const response = await documentAPI.getTags();
@@ -257,7 +259,6 @@ const Documents = () => {
         }
     };
 
-    // Fetch documents for a specific athlete
     const fetchAthleteDocuments = async (athleteId) => {
         try {
             setLoading(true);
@@ -265,13 +266,12 @@ const Documents = () => {
             setAthleteDocuments(response.data || []);
         } catch (error) {
             console.error("Error fetching athlete documents", error);
-            notify.error("Erreur lors du chargement des documents de l'athlète");
+            notify.error(t('common.error'));
         } finally {
             setLoading(false);
         }
     };
 
-    // Perform advanced search
     const performSearch = async () => {
         if (!searchTerm && filterCategory === 'all' && filterStatus === 'all' && filterTags.length === 0) {
             setSearchResults([]);
@@ -281,36 +281,23 @@ const Documents = () => {
         try {
             setLoading(true);
             const params = {};
-            
-            if (searchTerm) {
-                params.search = searchTerm;
-            }
-            
-            if (filterCategory !== 'all') {
-                params.category_id = filterCategory;
-            }
-            
-            if (filterStatus !== 'all') {
-                params.status = filterStatus;
-            }
-            
-            if (filterTags.length > 0) {
-                params.tag_ids = filterTags.join(',');
-            }
-            
+
+            if (searchTerm) params.search = searchTerm;
+            if (filterCategory !== 'all') params.category_id = filterCategory;
+            if (filterStatus !== 'all') params.status = filterStatus;
+            if (filterTags.length > 0) params.tag_ids = filterTags.join(',');
             params.sort = sortOrder;
-            
+
             const response = await documentAPI.search(params);
             setSearchResults(response.data || []);
         } catch (error) {
             console.error("Error performing search", error);
-            notify.error("Erreur lors de la recherche");
+            notify.error(t('common.error'));
         } finally {
             setLoading(false);
         }
     };
 
-    // Initial load
     useEffect(() => {
         fetchPendingDocuments();
         fetchExpiringDocuments();
@@ -320,7 +307,6 @@ const Documents = () => {
         fetchTags();
     }, []);
 
-    // Handle tab change
     const handleTabChange = (tab) => {
         setActiveTab(tab);
         setSelectedAthlete(null);
@@ -333,19 +319,16 @@ const Documents = () => {
         setShowSearchView(false);
     };
 
-    // Handle athlete selection
     const handleAthleteClick = (athlete) => {
         setSelectedAthlete(athlete);
         fetchAthleteDocuments(athlete.id);
     };
 
-    // Handle back to archives
     const handleBackToArchives = () => {
         setSelectedAthlete(null);
         setAthleteDocuments([]);
     };
 
-    // Toggle athlete selection for bulk upload
     const toggleAthleteSelection = (athlete) => {
         const isSelected = bulkSelectedAthletes.some(a => a.id === athlete.id);
         if (isSelected) {
@@ -355,7 +338,6 @@ const Documents = () => {
         }
     };
 
-    // Handle file selection for bulk upload
     const handleBulkFileSelect = (athleteId, file) => {
         setBulkFiles(prev => ({
             ...prev,
@@ -363,7 +345,6 @@ const Documents = () => {
         }));
     };
 
-    // Toggle tag selection
     const toggleTagSelection = (tagId, isBulk = false) => {
         if (isBulk) {
             const isSelected = bulkTags.includes(tagId);
@@ -384,55 +365,41 @@ const Documents = () => {
 
     const handleValidate = async (id) => {
         const confirmed = await confirm(
-            'Valider ce document ?',
+            t('admin_documents.msg_validate'),
             {
-                title: 'Valider le document',
-                confirmText: 'Valider',
-                cancelText: 'Annuler',
+                title: t('admin_documents.btn_validate'),
+                confirmText: t('admin_documents.btn_validate'),
+                cancelText: t('common.cancel'),
                 type: 'info'
             }
         );
         if (!confirmed) return;
         try {
             await documentAPI.validate(id);
-            notify.success('Document validé avec succès');
-            // Refresh current view
-            if (activeTab === 'pending') {
-                fetchPendingDocuments();
-            } else if (activeTab === 'expiring') {
-                fetchExpiringDocuments();
-            } else if (activeTab === 'expired') {
-                fetchExpiredDocuments();
-            } else if (selectedAthlete) {
-                fetchAthleteDocuments(selectedAthlete.id);
-            } else if (showSearchView) {
-                performSearch();
-            }
+            notify.success(t('common.success'));
+            if (activeTab === 'pending') fetchPendingDocuments();
+            else if (activeTab === 'expiring') fetchExpiringDocuments();
+            else if (activeTab === 'expired') fetchExpiredDocuments();
+            else if (selectedAthlete) fetchAthleteDocuments(selectedAthlete.id);
+            else if (showSearchView) performSearch();
         } catch (error) {
-            notify.error('Erreur lors de la validation');
+            notify.error(t('common.error'));
         }
     };
 
     const handleReject = async (id) => {
-        const reason = prompt('Raison du rejet :');
+        const reason = prompt(t('admin_documents.msg_reject'));
         if (reason === null) return;
         try {
             await documentAPI.reject(id, reason);
-            notify.success('Document rejeté');
-            // Refresh current view
-            if (activeTab === 'pending') {
-                fetchPendingDocuments();
-            } else if (activeTab === 'expiring') {
-                fetchExpiringDocuments();
-            } else if (activeTab === 'expired') {
-                fetchExpiredDocuments();
-            } else if (selectedAthlete) {
-                fetchAthleteDocuments(selectedAthlete.id);
-            } else if (showSearchView) {
-                performSearch();
-            }
+            notify.success(t('common.success'));
+            if (activeTab === 'pending') fetchPendingDocuments();
+            else if (activeTab === 'expiring') fetchExpiringDocuments();
+            else if (activeTab === 'expired') fetchExpiredDocuments();
+            else if (selectedAthlete) fetchAthleteDocuments(selectedAthlete.id);
+            else if (showSearchView) performSearch();
         } catch (error) {
-            notify.error('Erreur lors du rejet');
+            notify.error(t('common.error'));
         }
     };
 
@@ -443,7 +410,6 @@ const Documents = () => {
     };
 
     const handlePreview = (doc) => {
-        // Enhanced preview logic to support more file types
         const supportedTypes = [
             'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
             'application/pdf',
@@ -455,16 +421,14 @@ const Documents = () => {
             'application/vnd.ms-powerpoint',
             'application/vnd.openxmlformats-officedocument.presentationml.presentation'
         ];
-        
+
         if (doc.mime_type && supportedTypes.includes(doc.mime_type)) {
             setPreviewDoc(doc);
         } else {
-            // Fallback to download for unsupported types
             handleDownload(doc.id);
         }
     };
 
-    // Calculate Compliance
     const getComplianceStatus = () => {
         if (!selectedAthlete || !athleteDocuments) return { score: 0, missing: [] };
 
@@ -475,8 +439,6 @@ const Documents = () => {
         );
 
         const missing = REQUIRED_DOCUMENTS.filter(req => {
-            // Skip parental consent if athlete is adult (assuming > 18)
-            // For now, we'll just list it as required for everyone or add logic if we had birthdate
             return !uploadedTypes.has(req.type);
         });
 
@@ -487,25 +449,18 @@ const Documents = () => {
 
     const compliance = getComplianceStatus();
 
-    // Filtered Documents
     const filteredDocuments = athleteDocuments.filter(doc => {
         if (filterStatus !== 'all' && doc.validation_status !== filterStatus) return false;
         if (filterCategory !== 'all' && (!doc.category || doc.category.id.toString() !== filterCategory)) return false;
-        
-        // Filter by tags (if any tags are selected, document must have ALL selected tags)
         if (filterTags.length > 0) {
             const docTagIds = doc.tags ? doc.tags.map(t => t.id) : [];
             return filterTags.every(tagId => docTagIds.includes(tagId));
         }
-        
         return true;
     });
 
-    // Filter & Sort Athletes
     const getFilteredAthletes = () => {
         let filtered = [...athletes];
-
-        // Search
         if (searchTerm) {
             const lowerTerm = searchTerm.toLowerCase();
             filtered = filtered.filter(a =>
@@ -514,29 +469,20 @@ const Documents = () => {
                 a.email.toLowerCase().includes(lowerTerm)
             );
         }
-
-        // Sort
         filtered.sort((a, b) => {
             switch (sortOrder) {
-                case 'name_asc':
-                    return a.last_name.localeCompare(b.last_name);
-                case 'name_desc':
-                    return b.last_name.localeCompare(a.last_name);
-                case 'date_newest':
-                    return new Date(b.created_at) - new Date(a.created_at);
-                case 'date_oldest':
-                    return new Date(a.created_at) - new Date(b.created_at);
-                default:
-                    return 0;
+                case 'name_asc': return a.last_name.localeCompare(b.last_name);
+                case 'name_desc': return b.last_name.localeCompare(a.last_name);
+                case 'date_newest': return new Date(b.created_at) - new Date(a.created_at);
+                case 'date_oldest': return new Date(a.created_at) - new Date(b.created_at);
+                default: return 0;
             }
         });
-
         return filtered;
     };
 
     const filteredAthletes = getFilteredAthletes();
 
-    // Stats
     const stats = {
         pending: documents.length,
         expiring: expiringDocuments.length,
@@ -545,22 +491,20 @@ const Documents = () => {
         activeAthletes: athletes.filter(a => a.is_active).length
     };
 
-    // Render Document Card
     const renderDocumentCard = (doc, showActions = true) => {
-        // Calculate days until expiration
         let expiryInfo = null;
         if (doc.expiry_date) {
             const expiryDate = new Date(doc.expiry_date);
             const today = new Date();
             const timeDiff = expiryDate.getTime() - today.getTime();
             const daysUntilExpiry = Math.ceil(timeDiff / (1000 * 3600 * 24));
-            
+
             if (daysUntilExpiry < 0) {
-                expiryInfo = { text: 'Expiré', className: 'expired' };
+                expiryInfo = { text: t('admin_documents.status_expired'), className: 'expired' };
             } else if (daysUntilExpiry <= 30) {
-                expiryInfo = { text: `Expire dans ${daysUntilExpiry} jours`, className: 'expiring' };
+                expiryInfo = { text: `${t('admin_documents.status_expiring')} (${daysUntilExpiry}j)`, className: 'expiring' };
             } else {
-                expiryInfo = { text: `Expire le ${expiryDate.toLocaleDateString()}`, className: 'valid' };
+                expiryInfo = { text: `${t('admin_documents.label_expiry')}: ${expiryDate.toLocaleDateString(locale)}`, className: 'valid' };
             }
         }
 
@@ -568,15 +512,10 @@ const Documents = () => {
             <div key={doc.id} className={`document-card ${expiryInfo ? expiryInfo.className : ''}`}>
                 <div className="doc-icon">
                     {doc.mime_type && doc.mime_type.startsWith('image/') ? '🖼️' :
-                     doc.mime_type === 'application/pdf' ? '📄' :
-                     doc.mime_type === 'text/plain' ? '📝' :
-                     doc.mime_type && (doc.mime_type.includes('word') || doc.mime_type.includes('document')) ? '📝' :
-                     doc.mime_type && (doc.mime_type.includes('excel') || doc.mime_type.includes('spreadsheet')) ? '📊' :
-                     doc.mime_type && (doc.mime_type.includes('powerpoint') || doc.mime_type.includes('presentation')) ? '📽️' :
-                     '📁'}
+                        doc.mime_type === 'application/pdf' ? '📄' : '📁'}
                 </div>
                 <div className="doc-info">
-                    <h3>{doc.document_type}</h3>
+                    <h3>{getDocumentLabel(doc.document_type)}</h3>
                     {doc.category && (
                         <span className="category-tag" style={{ backgroundColor: doc.category.color }}>
                             {doc.category.name}
@@ -584,74 +523,35 @@ const Documents = () => {
                     )}
                     <p className="filename">{doc.file_name}</p>
                     <p className="meta">
-                        {activeTab === 'pending' && `Athlète ID: ${doc.athlete_id} • `}
-                        Date: {new Date(doc.uploaded_at).toLocaleDateString()}
-                        {doc.validation_status !== 'pending' && ` • Statut: ${doc.validation_status}`}
-                        {doc.expiry_date && ` • Expire: ${new Date(doc.expiry_date).toLocaleDateString()}`}
+                        {activeTab === 'pending' && `${t('admin_documents.label_athlete')} ID: ${doc.athlete_id} • `}
+                        {t('admin_payments.th_date')}: {new Date(doc.uploaded_at).toLocaleDateString(locale)}
+                        {doc.validation_status !== 'pending' && ` • ${t('admin_athletes.th_status')}: ${t(`admin_documents.status_${doc.validation_status}`) || doc.validation_status}`}
                     </p>
                     {expiryInfo && (
-                        <p className={`expiry-status ${expiryInfo.className}`}>
-                            {expiryInfo.text}
-                        </p>
+                        <p className={`expiry-status ${expiryInfo.className}`}>{expiryInfo.text}</p>
                     )}
-                    {doc.tags && doc.tags.length > 0 && (
-                        <div className="tags-container">
-                            {doc.tags.map(tag => (
-                                <span key={tag.id} className="doc-tag" style={{ backgroundColor: tag.color }}>
-                                    {tag.name}
-                                </span>
-                            ))}
-                        </div>
-                    )}
-                    {doc.notes && <p className="notes">Note: {doc.notes}</p>}
-                    {doc.rejection_reason && <p className="notes" style={{ color: 'var(--danger-color)', background: 'rgba(244, 67, 54, 0.1)' }}>Raison du rejet: {doc.rejection_reason}</p>}
+                    {doc.notes && <p className="notes">{t('admin_documents.label_notes')}: {doc.notes}</p>}
                 </div>
                 <div className="doc-actions">
-                    <button
-                        onClick={() => handlePreview(doc)}
-                        className="btn-download"
-                        title="Aperçu"
-                    >
-                        Aperçu
+                    <button onClick={() => handlePreview(doc)} className="btn-download" title={t('admin_documents.btn_preview')}>
+                        {t('admin_documents.btn_preview')}
                     </button>
-                    <button
-                        onClick={() => handleDownload(doc.id)}
-                        className="btn-download"
-                        title="Télécharger"
-                    >
+                    <button onClick={() => handleDownload(doc.id)} className="btn-download" title={t('admin_documents.btn_download')}>
                         ⬇️
                     </button>
-                    <button
-                        onClick={() => showDocumentVersions(doc)}
-                        className="btn-download"
-                        title="Versions"
-                    >
+                    <button onClick={() => showDocumentVersions(doc)} className="btn-download" title={t('admin_documents.btn_versions')}>
                         📚
                     </button>
-                    <button
-                        onClick={() => showShareModal(doc)}
-                        className="btn-download"
-                        title="Partager"
-                    >
+                    <button onClick={() => showShareModal(doc)} className="btn-download" title={t('admin_documents.btn_share')}>
                         🔗
                     </button>
-
-                    {/* Show validate/reject buttons if pending */}
                     {doc.validation_status === 'pending' && showActions && (
                         <>
-                            <button
-                                onClick={() => handleValidate(doc.id)}
-                                className="btn-validate"
-                                title="Valider"
-                            >
-                                Valider
+                            <button onClick={() => handleValidate(doc.id)} className="btn-validate" title={t('admin_documents.btn_validate')}>
+                                {t('admin_documents.btn_validate')}
                             </button>
-                            <button
-                                onClick={() => handleReject(doc.id)}
-                                className="btn-reject"
-                                title="Rejet"
-                            >
-                                Rejeter
+                            <button onClick={() => handleReject(doc.id)} className="btn-reject" title={t('admin_documents.btn_reject')}>
+                                {t('admin_documents.btn_reject')}
                             </button>
                         </>
                     )}
@@ -660,88 +560,103 @@ const Documents = () => {
         );
     };
 
-    // Fetch document versions
     const fetchDocumentVersions = async (documentId) => {
         try {
             const response = await documentAPI.getVersions(documentId);
             setDocumentVersions(response.data || []);
         } catch (error) {
             console.error("Error fetching document versions", error);
-            notify.error("Erreur lors du chargement des versions du document");
+            notify.error(t('common.error'));
         }
     };
-    
-    // Fetch document shares
+
     const fetchDocumentShares = async (documentId) => {
         try {
             const response = await documentAPI.getShares(documentId);
             setDocumentShares(response.data || []);
         } catch (error) {
             console.error("Error fetching document shares", error);
-            notify.error("Erreur lors du chargement des partages du document");
         }
     };
-    
-    // Handle document sharing
+
     const handleShareDocument = async (e) => {
         e.preventDefault();
         if (!currentDocument || !shareData.shared_with) return;
-        
+
         try {
-            const response = await documentAPI.share(currentDocument.id, shareData);
-            notify.success('Document partagé avec succès');
+            await documentAPI.share(currentDocument.id, shareData);
+            notify.success(t('common.success'));
             setShareModalOpen(false);
-            setShareData({
-                shared_with: '',
-                permission_level: 'view',
-                notes: '',
-                expires_at: ''
-            });
-            
-            // Refresh shares
+            setShareData({ shared_with: '', permission_level: 'view', notes: '', expires_at: '' });
             fetchDocumentShares(currentDocument.id);
         } catch (error) {
             console.error("Share document error", error);
-            notify.error("Erreur lors du partage du document");
+            notify.error(t('common.error'));
         }
     };
-    
-    // Handle unsharing document
+
     const handleUnshareDocument = async (userId) => {
         if (!currentDocument) return;
-        
         const confirmed = await confirm(
-            'Retirer le partage pour cet utilisateur ?',
+            t('admin_documents.msg_delete_share'),
             {
-                title: 'Retirer le partage',
-                confirmText: 'Retirer',
-                cancelText: 'Annuler',
+                title: t('admin_documents.btn_share'),
+                confirmText: t('common.delete'),
+                cancelText: t('common.cancel'),
                 type: 'warning'
             }
         );
-        
         if (!confirmed) return;
-        
+
         try {
             await documentAPI.unshare(currentDocument.id, { user_id: userId });
-            notify.success('Partage retiré avec succès');
-            
-            // Refresh shares
+            notify.success(t('common.success'));
             fetchDocumentShares(currentDocument.id);
         } catch (error) {
             console.error("Unshare document error", error);
-            notify.error("Erreur lors du retrait du partage");
+            notify.error(t('common.error'));
         }
     };
-    
-    // Show share modal for a document
+
     const showShareModal = async (doc) => {
         setCurrentDocument(doc);
         await fetchDocumentShares(doc.id);
         setShareModalOpen(true);
     };
-    
-    // Hide share modal
+
+    const handleUploadVersion = async (e) => {
+        e.preventDefault();
+        if (!newVersionFile || !currentDocument) return;
+
+        const formData = new FormData();
+        formData.append('file', newVersionFile);
+        formData.append('notes', newVersionNotes);
+
+        try {
+            await documentAPI.uploadVersion(currentDocument.id, formData);
+            notify.success(t('common.success'));
+            setVersionModalOpen(false);
+            setNewVersionFile(null);
+            setNewVersionNotes('');
+            fetchDocumentVersions(currentDocument.id);
+        } catch (error) {
+            console.error("Upload version error", error);
+            notify.error(t('common.error'));
+        }
+    };
+
+    const showDocumentVersions = async (doc) => {
+        setCurrentDocument(doc);
+        await fetchDocumentVersions(doc.id);
+        setShowVersions(true);
+    };
+
+    const hideDocumentVersions = () => {
+        setShowVersions(false);
+        setCurrentDocument(null);
+        setDocumentVersions([]);
+    };
+
     const hideShareModal = () => {
         setShareModalOpen(false);
         setCurrentDocument(null);
@@ -754,78 +669,26 @@ const Documents = () => {
         });
     };
 
-    // Handle version upload
-    const handleUploadVersion = async (e) => {
-        e.preventDefault();
-        if (!newVersionFile || !currentDocument) return;
-
-        const formData = new FormData();
-        formData.append('file', newVersionFile);
-        formData.append('notes', newVersionNotes);
-
-        try {
-            await documentAPI.uploadVersion(currentDocument.id, formData);
-            notify.success('Nouvelle version ajoutée avec succès');
-            setVersionModalOpen(false);
-            setNewVersionFile(null);
-            setNewVersionNotes('');
-            
-            // Refresh versions
-            fetchDocumentVersions(currentDocument.id);
-        } catch (error) {
-            console.error("Upload version error", error);
-            notify.error("Erreur lors de l'ajout de la nouvelle version");
-        }
-    };
-
-    // Show versions for a document
-    const showDocumentVersions = async (doc) => {
-        setCurrentDocument(doc);
-        await fetchDocumentVersions(doc.id);
-        setShowVersions(true);
-    };
-
-    // Hide versions view
-    const hideDocumentVersions = () => {
-        setShowVersions(false);
-        setCurrentDocument(null);
-        setDocumentVersions([]);
-    };
-
-    // Render version card
     const renderVersionCard = (version) => {
         return (
             <div key={version.id} className="document-card">
                 <div className="doc-icon">
                     {version.mime_type && version.mime_type.startsWith('image/') ? '🖼️' :
-                     version.mime_type === 'application/pdf' ? '📄' :
-                     version.mime_type === 'text/plain' ? '📝' :
-                     version.mime_type && (version.mime_type.includes('word') || version.mime_type.includes('document')) ? '📝' :
-                     version.mime_type && (version.mime_type.includes('excel') || version.mime_type.includes('spreadsheet')) ? '📊' :
-                     version.mime_type && (version.mime_type.includes('powerpoint') || version.mime_type.includes('presentation')) ? '📽️' :
-                     '📁'}
+                        version.mime_type === 'application/pdf' ? '📄' : '📁'}
                 </div>
                 <div className="doc-info">
-                    <h3>Version {version.version_number}</h3>
+                    <h3>{t('admin_documents.label_version')} {version.version_number}</h3>
                     <p className="filename">{version.file_name}</p>
                     <p className="meta">
-                        Date: {new Date(version.uploaded_at).toLocaleDateString()}
+                        {t('admin_payments.th_date')}: {new Date(version.uploaded_at).toLocaleDateString(locale)}
                         {version.notes && ` • Note: ${version.notes}`}
                     </p>
                 </div>
                 <div className="doc-actions">
-                    <button
-                        onClick={() => handlePreview({...version, mime_type: version.mime_type, id: version.id})}
-                        className="btn-download"
-                        title="Aperçu"
-                    >
-                        Aperçu
+                    <button onClick={() => handlePreview({ ...version, mime_type: version.mime_type, id: version.id })} className="btn-download" title={t('admin_documents.btn_preview')}>
+                        {t('admin_documents.btn_preview')}
                     </button>
-                    <button
-                        onClick={() => handleDownload(version.id)}
-                        className="btn-download"
-                        title="Télécharger"
-                    >
+                    <button onClick={() => handleDownload(version.id)} className="btn-download" title={t('admin_documents.btn_download')}>
                         ⬇️
                     </button>
                 </div>
@@ -833,116 +696,36 @@ const Documents = () => {
         );
     };
 
-    // Render preview content based on file type
-    const renderPreviewContent = (doc) => {
-        if (!doc.mime_type) {
-            return <div>Type de fichier inconnu</div>;
-        }
-
-        // Image files
-        if (doc.mime_type.startsWith('image/')) {
-            return (
-                <img
-                    src={`${documentAPI.getDownloadUrl(doc.id)}?token=${localStorage.getItem('token')}`}
-                    alt="Preview"
-                    className="preview-image"
-                    style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
-                />
-            );
-        }
-
-        // PDF files
-        if (doc.mime_type === 'application/pdf') {
-            return (
-                <iframe
-                    src={`${documentAPI.getDownloadUrl(doc.id)}?token=${localStorage.getItem('token')}`}
-                    className="preview-iframe"
-                    title="PDF Preview"
-                    style={{ width: '100%', height: '70vh', border: 'none' }}
-                />
-            );
-        }
-
-        // Text files
-        if (doc.mime_type === 'text/plain') {
-            return (
-                <iframe
-                    src={`${documentAPI.getDownloadUrl(doc.id)}?token=${localStorage.getItem('token')}`}
-                    className="preview-iframe"
-                    title="Text Preview"
-                    style={{ width: '100%', height: '70vh', border: 'none' }}
-                />
-            );
-        }
-
-        // Office documents - show preview unavailable message with download option
-        if (doc.mime_type.includes('word') || doc.mime_type.includes('excel') || 
-            doc.mime_type.includes('powerpoint') || doc.mime_type.includes('document') ||
-            doc.mime_type.includes('spreadsheet') || doc.mime_type.includes('presentation')) {
-            return (
-                <div className="office-preview-placeholder">
-                    <div className="placeholder-icon">📄</div>
-                    <h3>Aperçu non disponible</h3>
-                    <p>Ce type de document nécessite une application spécifique pour être visualisé.</p>
-                    <button 
-                        className="btn-download"
-                        onClick={() => handleDownload(doc.id)}
-                        style={{ marginTop: '1rem' }}
-                    >
-                        Télécharger le document
-                    </button>
-                </div>
-            );
-        }
-
-        // Default fallback
-        return (
-            <div className="default-preview-placeholder">
-                <div className="placeholder-icon">📁</div>
-                <h3>Aperçu non disponible</h3>
-                <p>Le type de fichier n'est pas pris en charge pour l'aperçu.</p>
-                <button 
-                    className="btn-download"
-                    onClick={() => handleDownload(doc.id)}
-                    style={{ marginTop: '1rem' }}
-                >
-                    Télécharger le document
-                </button>
-            </div>
-        );
-    };
-
     return (
         <div className="documents-page">
             <div className="page-header">
-                <h1>Gestion des Documents</h1>
-
+                <h1>{t('admin_documents.title')}</h1>
                 <div className="stats-grid">
                     <div className="stat-card">
                         <div className="stat-icon">📄</div>
                         <div className="stat-info">
-                            <h3>Documents en Attente</h3>
+                            <h3>{t('admin_documents.title_pending')}</h3>
                             <p className="stat-value">{stats.pending}</p>
                         </div>
                     </div>
                     <div className="stat-card">
                         <div className="stat-icon">⚠️</div>
                         <div className="stat-info">
-                            <h3>Expirant Bientôt</h3>
+                            <h3>{t('admin_documents.title_expiring')}</h3>
                             <p className="stat-value">{stats.expiring}</p>
                         </div>
                     </div>
                     <div className="stat-card">
                         <div className="stat-icon">❌</div>
                         <div className="stat-info">
-                            <h3>Expirés</h3>
+                            <h3>{t('admin_documents.title_expired')}</h3>
                             <p className="stat-value">{stats.expired}</p>
                         </div>
                     </div>
                     <div className="stat-card">
                         <div className="stat-icon">✅</div>
                         <div className="stat-info">
-                            <h3>Athlètes Actifs</h3>
+                            <h3>{t('admin_documents.title_active_athletes')}</h3>
                             <p className="stat-value">{stats.activeAthletes}</p>
                         </div>
                     </div>
@@ -950,462 +733,194 @@ const Documents = () => {
             </div>
 
             <div className="tabs">
-                <button
-                    className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
-                    onClick={() => handleTabChange('pending')}
-                >
-                    En Attente
+                <button className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`} onClick={() => handleTabChange('pending')}>
+                    {t('admin_documents.tab_pending')}
                 </button>
-                <button
-                    className={`tab-btn ${activeTab === 'expiring' ? 'active' : ''}`}
-                    onClick={() => handleTabChange('expiring')}
-                >
-                    Expirant Bientôt
+                <button className={`tab-btn ${activeTab === 'expiring' ? 'active' : ''}`} onClick={() => handleTabChange('expiring')}>
+                    {t('admin_documents.tab_expiring')}
                 </button>
-                <button
-                    className={`tab-btn ${activeTab === 'expired' ? 'active' : ''}`}
-                    onClick={() => handleTabChange('expired')}
-                >
-                    Expirés
+                <button className={`tab-btn ${activeTab === 'expired' ? 'active' : ''}`} onClick={() => handleTabChange('expired')}>
+                    {t('admin_documents.tab_expired')}
                 </button>
-                <button
-                    className={`tab-btn ${activeTab === 'archives' ? 'active' : ''}`}
-                    onClick={() => handleTabChange('archives')}
-                >
-                    Archives par Athlète
+                <button className={`tab-btn ${activeTab === 'archives' ? 'active' : ''}`} onClick={() => handleTabChange('archives')}>
+                    {t('admin_documents.tab_archives')}
                 </button>
-                <button
-                    className={`tab-btn ${activeTab === 'search' ? 'active' : ''}`}
-                    onClick={() => {
-                        handleTabChange('search');
-                        setShowSearchView(true);
-                    }}
-                >
-                    Recherche Avancée
+                <button className={`tab-btn ${activeTab === 'search' ? 'active' : ''}`} onClick={() => { handleTabChange('search'); setShowSearchView(true); }}>
+                    {t('admin_documents.tab_search')}
                 </button>
             </div>
 
-            {/* Pending Documents View */}
             {activeTab === 'pending' && (
                 <div className="documents-list">
-                    {loading ? (
-                        <div>Chargement...</div>
-                    ) : documents.length > 0 ? (
-                        documents.map(doc => renderDocumentCard(doc))
-                    ) : (
-                        <div className="empty-state">
-                            <p>Aucun document en attente de validation.</p>
-                        </div>
-                    )}
+                    {loading ? <div>{t('common.loading')}</div> : documents.length > 0 ? documents.map(doc => renderDocumentCard(doc)) : <div className="empty-state"><p>{t('common.none')}</p></div>}
                 </div>
             )}
 
-            {/* Expiring Documents View */}
             {activeTab === 'expiring' && (
                 <div className="documents-list">
-                    {loading ? (
-                        <div>Chargement...</div>
-                    ) : expiringDocuments.length > 0 ? (
-                        expiringDocuments.map(doc => renderDocumentCard(doc))
-                    ) : (
-                        <div className="empty-state">
-                            <p>Aucun document n'expire dans les 30 prochains jours.</p>
-                        </div>
-                    )}
+                    {loading ? <div>{t('common.loading')}</div> : expiringDocuments.length > 0 ? expiringDocuments.map(doc => renderDocumentCard(doc)) : <div className="empty-state"><p>{t('common.none')}</p></div>}
                 </div>
             )}
 
-            {/* Expired Documents View */}
             {activeTab === 'expired' && (
                 <div className="documents-list">
-                    {loading ? (
-                        <div>Chargement...</div>
-                    ) : expiredDocuments.length > 0 ? (
-                        expiredDocuments.map(doc => renderDocumentCard(doc))
-                    ) : (
-                        <div className="empty-state">
-                            <p>Aucun document expiré.</p>
-                        </div>
-                    )}
+                    {loading ? <div>{t('common.loading')}</div> : expiredDocuments.length > 0 ? expiredDocuments.map(doc => renderDocumentCard(doc)) : <div className="empty-state"><p>{t('common.none')}</p></div>}
                 </div>
             )}
 
-            {/* Archives View */}
             {activeTab === 'archives' && !selectedAthlete && !showSearchView && (
                 <>
-                    {/* Search & Sort Controls */}
                     <div className="controls-bar">
                         <div className="search-container">
                             <span className="search-icon">🔍</span>
-                            <input
-                                type="text"
-                                className="search-input"
-                                placeholder="Rechercher un athlète (nom, email)..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                            <input type="text" className="search-input" placeholder={t('admin_documents.placeholder_search_athlete')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
-                        <select
-                            className="sort-dropdown"
-                            value={sortOrder}
-                            onChange={(e) => setSortOrder(e.target.value)}
-                        >
-                            <option value="name_asc">Nom (A-Z)</option>
-                            <option value="name_desc">Nom (Z-A)</option>
-                            <option value="date_newest">Plus récents</option>
-                            <option value="date_oldest">Plus anciens</option>
+                        <select className="sort-dropdown" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
+                            <option value="name_asc">{t('admin_documents.sort_name_asc')}</option>
+                            <option value="name_desc">{t('admin_documents.sort_name_desc')}</option>
+                            <option value="date_newest">{t('admin_documents.sort_date_newest')}</option>
+                            <option value="date_oldest">{t('admin_documents.sort_date_oldest')}</option>
                         </select>
-                        <button
-                            className="btn-add-doc"
-                            onClick={() => setBulkUploadModalOpen(true)}
-                            style={{ marginLeft: '1rem' }}
-                        >
-                            + Upload en Masse
+                        <button className="btn-add-doc" onClick={() => setBulkUploadModalOpen(true)} style={{ marginLeft: '1rem' }}>
+                            + {t('admin_documents.btn_bulk_upload')}
                         </button>
                     </div>
 
                     <div className="athletes-grid">
-                        {loading ? (
-                            <div>Chargement...</div>
-                        ) : filteredAthletes.length > 0 ? (
-                            filteredAthletes.map(athlete => (
-                                <div
-                                    key={athlete.id}
-                                    className="athlete-folder-card"
-                                    onClick={() => handleAthleteClick(athlete)}
-                                >
-                                    <span className="folder-icon">📁</span>
-                                    <h3>{athlete.first_name} {athlete.last_name}</h3>
-                                    <p>{athlete.email}</p>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="empty-state">
-                                <p>Aucun athlète trouvé.</p>
+                        {loading ? <div>{t('common.loading')}</div> : filteredAthletes.length > 0 ? filteredAthletes.map(athlete => (
+                            <div key={athlete.id} className="athlete-folder-card" onClick={() => handleAthleteClick(athlete)}>
+                                <span className="folder-icon">📁</span>
+                                <h3>{athlete.first_name} {athlete.last_name}</h3>
+                                <p>{athlete.email}</p>
                             </div>
-                        )}
+                        )) : <div className="empty-state"><p>{t('common.none')}</p></div>}
                     </div>
                 </>
             )}
 
-            {/* Search View */}
             {showSearchView && (
                 <div className="search-view">
                     <div className="controls-bar">
                         <div className="search-container">
                             <span className="search-icon">🔍</span>
-                            <input
-                                type="text"
-                                className="search-input"
-                                placeholder="Rechercher par nom de fichier ou notes..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                            <input type="text" className="search-input" placeholder={t('admin_documents.placeholder_search_file')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
-                        <button
-                            className="btn-add-doc"
-                            onClick={performSearch}
-                        >
-                            Rechercher
-                        </button>
+                        <button className="btn-add-doc" onClick={performSearch}>{t('common.search')}</button>
                     </div>
 
-                    {/* Advanced Filters */}
                     <div className="filters-container">
                         <div className="filters">
-                            <select
-                                className="filter-select"
-                                value={filterStatus}
-                                onChange={(e) => setFilterStatus(e.target.value)}
-                            >
-                                <option value="all">Tous les statuts</option>
-                                <option value="pending">En attente</option>
-                                <option value="approved">Validé</option>
-                                <option value="rejected">Rejeté</option>
+                            <select className="filter-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                                <option value="all">{t('admin_documents.filter_all_status')}</option>
+                                <option value="pending">{t('admin_documents.filter_pending')}</option>
+                                <option value="approved">{t('admin_documents.filter_approved')}</option>
+                                <option value="rejected">{t('admin_documents.filter_rejected')}</option>
                             </select>
-                            
-                            <select
-                                className="filter-select"
-                                value={filterCategory}
-                                onChange={(e) => setFilterCategory(e.target.value)}
-                            >
-                                <option value="all">Toutes catégories</option>
-                                {categories.map(category => (
-                                    <option key={category.id} value={category.id}>{category.name}</option>
-                                ))}
+                            <select className="filter-select" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+                                <option value="all">{t('admin_documents.filter_all_categories')}</option>
+                                {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
                             </select>
-                            
-                            <select
-                                className="filter-select"
-                                value={sortOrder}
-                                onChange={(e) => setSortOrder(e.target.value)}
-                            >
-                                <option value="name_asc">Nom (A-Z)</option>
-                                <option value="name_desc">Nom (Z-A)</option>
-                                <option value="date_asc">Date (Ancien-Nouveau)</option>
-                                <option value="date_desc">Date (Nouveau-Ancien)</option>
-                                <option value="expiry_asc">Expiration (Proche-Lointain)</option>
-                                <option value="expiry_desc">Expiration (Lointain-Proche)</option>
-                            </select>
-                        </div>
-                        
-                        <div className="filters">
-                            <div className="tag-filters">
-                                <span className="filter-label">Tags:</span>
-                                {tags.map(tag => (
-                                    <button
-                                        key={tag.id}
-                                        className={`filter-btn tag-filter ${filterTags.includes(tag.id) ? 'active' : ''}`}
-                                        onClick={() => {
-                                            const newFilters = filterTags.includes(tag.id) 
-                                                ? filterTags.filter(id => id !== tag.id)
-                                                : [...filterTags, tag.id];
-                                            setFilterTags(newFilters);
-                                        }}
-                                        style={{ 
-                                            backgroundColor: filterTags.includes(tag.id) ? tag.color : 'transparent',
-                                            color: filterTags.includes(tag.id) ? 'white' : tag.color,
-                                            borderColor: tag.color
-                                        }}
-                                    >
-                                        {tag.name}
-                                    </button>
-                                ))}
-                            </div>
                         </div>
                     </div>
 
                     <div className="documents-list">
-                        {loading ? (
-                            <div>Chargement...</div>
-                        ) : searchResults.length > 0 ? (
-                            searchResults.map(doc => renderDocumentCard(doc, true))
-                        ) : searchTerm || filterCategory !== 'all' || filterStatus !== 'all' || filterTags.length > 0 ? (
-                            <div className="empty-state">
-                                <p>Aucun document trouvé avec ces critères.</p>
-                            </div>
-                        ) : (
-                            <div className="empty-state">
-                                <p>Utilisez les filtres ci-dessus pour rechercher des documents.</p>
-                            </div>
-                        )}
+                        {loading ? <div>{t('common.loading')}</div> : searchResults.length > 0 ? searchResults.map(doc => renderDocumentCard(doc, true)) : <div className="empty-state"><p>{t('common.none')}</p></div>}
                     </div>
                 </div>
             )}
 
-            {/* Selected Athlete Folder View */}
             {activeTab === 'archives' && selectedAthlete && (
                 <div className="athlete-folder-view">
                     <div className="folder-header">
                         <div className="header-left">
-                            <button onClick={handleBackToArchives} className="btn-back">
-                                ← Retour aux athlètes
-                            </button>
-                            <h2>Dossier: {selectedAthlete.first_name} {selectedAthlete.last_name}</h2>
+                            <button onClick={handleBackToArchives} className="btn-back">← {t('admin_documents.back_to_archives')}</button>
+                            <h2>{t('admin_documents.folder')} {selectedAthlete.first_name} {selectedAthlete.last_name}</h2>
                         </div>
-                        <button
-                            className="btn-add-doc"
-                            onClick={() => setUploadModalOpen(true)}
-                        >
-                            + Ajouter un document
-                        </button>
+                        <button className="btn-add-doc" onClick={() => setUploadModalOpen(true)}>+ {t('admin_documents.btn_add')}</button>
                     </div>
 
-                    {/* Compliance Section */}
                     <div className="compliance-section">
                         <div className="compliance-header">
-                            <h3>État du Dossier</h3>
-                            <span className="compliance-score">{compliance.score}% Complet</span>
+                            <h3>{t('admin_documents.folder_status')}</h3>
+                            <span className="compliance-score">{compliance.score}% {t('admin_documents.compliance')}</span>
                         </div>
                         <div className="progress-bar">
-                            <div
-                                className={`progress-fill ${compliance.score < 100 ? 'incomplete' : ''}`}
-                                style={{ width: `${compliance.score}%` }}
-                            ></div>
+                            <div className={`progress-fill ${compliance.score < 100 ? 'incomplete' : ''}`} style={{ width: `${compliance.score}%` }}></div>
                         </div>
-
                         {compliance.missing.length > 0 ? (
                             <div className="missing-docs">
-                                <h4>Documents Manquants :</h4>
+                                <h4>{t('admin_documents.missing_docs')}</h4>
                                 {compliance.missing.map((doc, index) => (
                                     <div key={index} className="missing-doc-item">
                                         <span className="missing-icon">⚠️</span>
-                                        <span>{doc.label} est requis</span>
+                                        <span>{t(`admin_documents.${doc.labelKey}`)} {t('admin_documents.is_required')}</span>
                                     </div>
                                 ))}
                             </div>
                         ) : (
                             <div className="missing-doc-item" style={{ borderColor: 'var(--success-color)', color: 'var(--success-color)', background: 'rgba(76, 175, 80, 0.1)' }}>
                                 <span className="missing-icon">✅</span>
-                                <span>Dossier complet</span>
+                                <span>{t('admin_documents.folder_complete')}</span>
                             </div>
                         )}
-                    </div>
-
-                    {/* Filters */}
-                    <div className="filters-container">
-                        <div className="filters">
-                            <button
-                                className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
-                                onClick={() => setFilterStatus('all')}
-                            >
-                                Tous
-                            </button>
-                            <button
-                                className={`filter-btn ${filterStatus === 'approved' ? 'active' : ''}`}
-                                onClick={() => setFilterStatus('approved')}
-                            >
-                                Validés
-                            </button>
-                            <button
-                                className={`filter-btn ${filterStatus === 'pending' ? 'active' : ''}`}
-                                onClick={() => setFilterStatus('pending')}
-                            >
-                                En Attente
-                            </button>
-                            <button
-                                className={`filter-btn ${filterStatus === 'rejected' ? 'active' : ''}`}
-                                onClick={() => setFilterStatus('rejected')}
-                            >
-                                Rejetés
-                            </button>
-                        </div>
-                        
-                        <div className="filters">
-                            <select
-                                className="filter-select"
-                                value={filterCategory}
-                                onChange={(e) => setFilterCategory(e.target.value)}
-                            >
-                                <option value="all">Toutes catégories</option>
-                                {categories.map(category => (
-                                    <option key={category.id} value={category.id}>{category.name}</option>
-                                ))}
-                            </select>
-                            
-                            <div className="tag-filters">
-                                <span className="filter-label">Tags:</span>
-                                {tags.map(tag => (
-                                    <button
-                                        key={tag.id}
-                                        className={`filter-btn tag-filter ${filterTags.includes(tag.id) ? 'active' : ''}`}
-                                        onClick={() => {
-                                            const newFilters = filterTags.includes(tag.id) 
-                                                ? filterTags.filter(id => id !== tag.id)
-                                                : [...filterTags, tag.id];
-                                            setFilterTags(newFilters);
-                                        }}
-                                        style={{ 
-                                            backgroundColor: filterTags.includes(tag.id) ? tag.color : 'transparent',
-                                            color: filterTags.includes(tag.id) ? 'white' : tag.color,
-                                            borderColor: tag.color
-                                        }}
-                                    >
-                                        {tag.name}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
                     </div>
 
                     <div className="documents-list">
-                        {loading ? (
-                            <div>Chargement...</div>
-                        ) : filteredDocuments.length > 0 ? (
-                            filteredDocuments.map(doc => renderDocumentCard(doc, true))
-                        ) : (
-                            <div className="empty-state">
-                                <p>Aucun document trouvé pour ce filtre.</p>
-                            </div>
-                        )}
+                        {loading ? <div>{t('common.loading')}</div> : filteredDocuments.length > 0 ? filteredDocuments.map(doc => renderDocumentCard(doc, true)) : <div className="empty-state"><p>{t('common.none')}</p></div>}
                     </div>
                 </div>
             )}
 
-            {/* Upload Modal */}
             {uploadModalOpen && (
                 <div className="modal-overlay" onClick={() => setUploadModalOpen(false)}>
                     <div className="modal-content upload-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3>Ajouter un document pour {selectedAthlete.first_name}</h3>
+                            <h3>{t('admin_documents.modal_upload_title')} {selectedAthlete?.first_name}</h3>
                             <button className="btn-close" onClick={() => setUploadModalOpen(false)}>×</button>
                         </div>
                         <div className="modal-body">
                             <form onSubmit={handleUpload}>
                                 <div className="form-group">
-                                    <label>Type de document</label>
-                                    <select
-                                        value={uploadDocType}
-                                        onChange={(e) => setUploadDocType(e.target.value)}
-                                        required
-                                    >
+                                    <label>{t('admin_documents.label_type')}</label>
+                                    <select value={uploadDocType} onChange={(e) => setUploadDocType(e.target.value)} required>
                                         {REQUIRED_DOCUMENTS.map(doc => (
-                                            <option key={doc.type} value={doc.type}>{doc.label}</option>
+                                            <option key={doc.type} value={doc.type}>{t(`admin_documents.${doc.labelKey}`)}</option>
                                         ))}
-                                        <option value="other">Autre</option>
+                                        <option value="other">{t('admin_documents.doc_other')}</option>
                                     </select>
                                 </div>
                                 <div className="form-group">
-                                    <label>Catégorie (optionnel)</label>
-                                    <select
-                                        value={uploadCategory}
-                                        onChange={(e) => setUploadCategory(e.target.value)}
-                                    >
-                                        <option value="">Sélectionner une catégorie</option>
-                                        {categories.map(category => (
-                                            <option key={category.id} value={category.id}>{category.name}</option>
-                                        ))}
+                                    <label>{t('admin_documents.label_category')}</label>
+                                    <select value={uploadCategory} onChange={(e) => setUploadCategory(e.target.value)}>
+                                        <option value="">{t('admin_documents.placeholder_select_category')}</option>
+                                        {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
                                     </select>
                                 </div>
                                 <div className="form-group">
-                                    <label>Tags (optionnel)</label>
+                                    <label>{t('admin_documents.label_tags')}</label>
                                     <div className="tag-selection">
                                         {tags.map(tag => (
-                                            <button
-                                                key={tag.id}
-                                                type="button"
-                                                className={`tag-option ${uploadTags.includes(tag.id) ? 'selected' : ''}`}
-                                                onClick={() => toggleTagSelection(tag.id)}
-                                                style={{ 
-                                                    backgroundColor: uploadTags.includes(tag.id) ? tag.color : 'transparent',
-                                                    color: uploadTags.includes(tag.id) ? 'white' : tag.color,
-                                                    borderColor: tag.color
-                                                }}
-                                            >
+                                            <button key={tag.id} type="button" className={`tag-option ${uploadTags.includes(tag.id) ? 'selected' : ''}`} onClick={() => toggleTagSelection(tag.id)} style={{ backgroundColor: uploadTags.includes(tag.id) ? tag.color : 'transparent', color: uploadTags.includes(tag.id) ? 'white' : tag.color, borderColor: tag.color }}>
                                                 {tag.name}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
                                 <div className="form-group">
-                                    <label>Date d'expiration (optionnel)</label>
-                                    <input
-                                        type="date"
-                                        value={uploadExpiryDate}
-                                        onChange={(e) => setUploadExpiryDate(e.target.value)}
-                                    />
+                                    <label>{t('admin_documents.label_expiry')}</label>
+                                    <input type="date" value={uploadExpiryDate} onChange={(e) => setUploadExpiryDate(e.target.value)} />
                                 </div>
                                 <div className="form-group">
-                                    <label>Fichier</label>
-                                    <input
-                                        type="file"
-                                        onChange={(e) => setUploadFile(e.target.files[0])}
-                                        required
-                                    />
+                                    <label>{t('admin_documents.label_file')}</label>
+                                    <input type="file" onChange={(e) => setUploadFile(e.target.files[0])} required />
                                 </div>
                                 <div className="form-group">
-                                    <label>Notes (Optionnel)</label>
-                                    <textarea
-                                        value={uploadNotes}
-                                        onChange={(e) => setUploadNotes(e.target.value)}
-                                        rows="3"
-                                    />
+                                    <label>{t('admin_documents.label_notes')}</label>
+                                    <textarea value={uploadNotes} onChange={(e) => setUploadNotes(e.target.value)} rows="3" />
                                 </div>
                                 <div className="modal-actions">
-                                    <button type="button" className="btn-cancel" onClick={() => setUploadModalOpen(false)}>Annuler</button>
-                                    <button type="submit" className="btn-submit" disabled={!uploadFile || loading}>
-                                        {loading ? 'Envoi...' : 'Ajouter'}
-                                    </button>
+                                    <button type="button" className="btn-cancel" onClick={() => setUploadModalOpen(false)}>{t('common.cancel')}</button>
+                                    <button type="submit" className="btn-submit" disabled={!uploadFile || loading}>{loading ? t('common.loading') : t('common.save')}</button>
                                 </div>
                             </form>
                         </div>
@@ -1413,109 +928,39 @@ const Documents = () => {
                 </div>
             )}
 
-            {/* Bulk Upload Modal */}
             {bulkUploadModalOpen && (
                 <div className="modal-overlay" onClick={() => setBulkUploadModalOpen(false)}>
                     <div className="modal-content upload-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '800px' }}>
                         <div className="modal-header">
-                            <h3>Upload en Masse de Documents</h3>
+                            <h3>{t('admin_documents.modal_bulk_upload_title')}</h3>
                             <button className="btn-close" onClick={() => setBulkUploadModalOpen(false)}>×</button>
                         </div>
                         <div className="modal-body">
                             <form onSubmit={handleBulkUpload}>
                                 <div className="form-group">
-                                    <label>Type de document</label>
-                                    <select
-                                        value={bulkDocType}
-                                        onChange={(e) => setBulkDocType(e.target.value)}
-                                        required
-                                    >
-                                        {REQUIRED_DOCUMENTS.map(doc => (
-                                            <option key={doc.type} value={doc.type}>{doc.label}</option>
-                                        ))}
-                                        <option value="other">Autre</option>
+                                    <label>{t('admin_documents.label_type')}</label>
+                                    <select value={bulkDocType} onChange={(e) => setBulkDocType(e.target.value)} required>
+                                        {REQUIRED_DOCUMENTS.map(doc => <option key={doc.type} value={doc.type}>{t(`admin_documents.${doc.labelKey}`)}</option>)}
+                                        <option value="other">{t('admin_documents.doc_other')}</option>
                                     </select>
                                 </div>
                                 <div className="form-group">
-                                    <label>Catégorie (optionnel)</label>
-                                    <select
-                                        value={bulkCategory}
-                                        onChange={(e) => setBulkCategory(e.target.value)}
-                                    >
-                                        <option value="">Sélectionner une catégorie</option>
-                                        {categories.map(category => (
-                                            <option key={category.id} value={category.id}>{category.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label>Tags (optionnel)</label>
-                                    <div className="tag-selection">
-                                        {tags.map(tag => (
-                                            <button
-                                                key={tag.id}
-                                                type="button"
-                                                className={`tag-option ${bulkTags.includes(tag.id) ? 'selected' : ''}`}
-                                                onClick={() => toggleTagSelection(tag.id, true)}
-                                                style={{ 
-                                                    backgroundColor: bulkTags.includes(tag.id) ? tag.color : 'transparent',
-                                                    color: bulkTags.includes(tag.id) ? 'white' : tag.color,
-                                                    borderColor: tag.color
-                                                }}
-                                            >
-                                                {tag.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Date d'expiration (optionnel)</label>
-                                    <input
-                                        type="date"
-                                        value={bulkExpiryDate}
-                                        onChange={(e) => setBulkExpiryDate(e.target.value)}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Notes (Optionnel)</label>
-                                    <textarea
-                                        value={bulkNotes}
-                                        onChange={(e) => setBulkNotes(e.target.value)}
-                                        rows="3"
-                                    />
-                                </div>
-                                
-                                <div className="form-group">
-                                    <label>Sélectionner les athlètes</label>
+                                    <label>{t('admin_documents.label_select_athletes')}</label>
                                     <div className="bulk-athlete-selection">
                                         {athletes.map(athlete => {
                                             const isSelected = bulkSelectedAthletes.some(a => a.id === athlete.id);
                                             return (
-                                                <div 
-                                                    key={athlete.id} 
-                                                    className={`bulk-athlete-item ${isSelected ? 'selected' : ''}`}
-                                                    onClick={() => toggleAthleteSelection(athlete)}
-                                                >
+                                                <div key={athlete.id} className={`bulk-athlete-item ${isSelected ? 'selected' : ''}`} onClick={() => toggleAthleteSelection(athlete)}>
                                                     <span className="athlete-name">{athlete.first_name} {athlete.last_name}</span>
-                                                    {isSelected && (
-                                                        <input
-                                                            type="file"
-                                                            onChange={(e) => handleBulkFileSelect(athlete.id, e.target.files[0])}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            style={{ marginLeft: '1rem' }}
-                                                        />
-                                                    )}
+                                                    {isSelected && <input type="file" onChange={(e) => handleBulkFileSelect(athlete.id, e.target.files[0])} onClick={(e) => e.stopPropagation()} style={{ marginLeft: '1rem' }} />}
                                                 </div>
                                             );
                                         })}
                                     </div>
                                 </div>
-                                
                                 <div className="modal-actions">
-                                    <button type="button" className="btn-cancel" onClick={() => setBulkUploadModalOpen(false)}>Annuler</button>
-                                    <button type="submit" className="btn-submit" disabled={bulkSelectedAthletes.length === 0 || loading}>
-                                        {loading ? 'Envoi...' : `Uploader (${bulkSelectedAthletes.length})`}
-                                    </button>
+                                    <button type="button" className="btn-cancel" onClick={() => setBulkUploadModalOpen(false)}>{t('common.cancel')}</button>
+                                    <button type="submit" className="btn-submit" disabled={bulkSelectedAthletes.length === 0 || loading}>{loading ? t('common.loading') : t('common.save')}</button>
                                 </div>
                             </form>
                         </div>
@@ -1523,174 +968,102 @@ const Documents = () => {
                 </div>
             )}
 
-            {/* Versions View */}
             {showVersions && currentDocument && (
                 <div className="versions-view">
                     <div className="folder-header">
                         <div className="header-left">
-                            <button onClick={hideDocumentVersions} className="btn-back">
-                                ← Retour
-                            </button>
-                            <h2>Versions: {currentDocument.file_name}</h2>
+                            <button onClick={hideDocumentVersions} className="btn-back">← {t('common.back')}</button>
+                            <h2>{t('admin_documents.versions')} {currentDocument.file_name}</h2>
                         </div>
-                        <button
-                            className="btn-add-doc"
-                            onClick={() => setVersionModalOpen(true)}
-                        >
-                            + Nouvelle Version
-                        </button>
+                        <button className="btn-add-doc" onClick={() => setVersionModalOpen(true)}>+ {t('admin_documents.btn_add_version')}</button>
                     </div>
-
                     <div className="documents-list">
-                        {documentVersions.length > 0 ? (
-                            documentVersions.map(version => renderVersionCard(version))
-                        ) : (
-                            <div className="empty-state">
-                                <p>Aucune version trouvée pour ce document.</p>
-                            </div>
-                        )}
+                        {documentVersions.length > 0 ? documentVersions.map(version => renderVersionCard(version)) : <div className="empty-state"><p>{t('common.none')}</p></div>}
                     </div>
                 </div>
             )}
 
-            {/* Version Upload Modal */}
             {versionModalOpen && (
                 <div className="modal-overlay" onClick={() => setVersionModalOpen(false)}>
                     <div className="modal-content upload-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3>Ajouter une nouvelle version</h3>
+                            <h3>{t('admin_documents.modal_version_title')}</h3>
                             <button className="btn-close" onClick={() => setVersionModalOpen(false)}>×</button>
                         </div>
                         <div className="modal-body">
                             <form onSubmit={handleUploadVersion}>
                                 <div className="form-group">
-                                    <label>Fichier</label>
-                                    <input
-                                        type="file"
-                                        onChange={(e) => setNewVersionFile(e.target.files[0])}
-                                        required
-                                    />
+                                    <label>{t('admin_documents.label_file')}</label>
+                                    <input type="file" onChange={(e) => setNewVersionFile(e.target.files[0])} required />
                                 </div>
                                 <div className="form-group">
-                                    <label>Notes (Optionnel)</label>
-                                    <textarea
-                                        value={newVersionNotes}
-                                        onChange={(e) => setNewVersionNotes(e.target.value)}
-                                        rows="3"
-                                    />
+                                    <label>{t('admin_documents.label_notes')}</label>
+                                    <textarea value={newVersionNotes} onChange={(e) => setNewVersionNotes(e.target.value)} rows="3" />
                                 </div>
                                 <div className="modal-actions">
-                                    <button type="button" className="btn-cancel" onClick={() => setVersionModalOpen(false)}>Annuler</button>
-                                    <button type="submit" className="btn-submit" disabled={!newVersionFile || loading}>
-                                        {loading ? 'Envoi...' : 'Ajouter Version'}
-                                    </button>
+                                    <button type="button" className="btn-cancel" onClick={() => setVersionModalOpen(false)}>{t('common.cancel')}</button>
+                                    <button type="submit" className="btn-submit" disabled={!newVersionFile || loading}>{loading ? t('common.loading') : t('common.save')}</button>
                                 </div>
                             </form>
-                        </div>
-                    </div>
-                </div>
-            )}
-                        
-            {/* Share Document Modal */}
-            {shareModalOpen && (
-                <div className="modal-overlay" onClick={hideShareModal}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-                        <div className="modal-header">
-                            <h3>Partager le document</h3>
-                            <button className="btn-close" onClick={hideShareModal}>×</button>
-                        </div>
-                        <div className="modal-body">
-                            <form onSubmit={handleShareDocument}>
-                                <div className="form-group">
-                                    <label>Partager avec (ID utilisateur)</label>
-                                    <input
-                                        type="number"
-                                        value={shareData.shared_with}
-                                        onChange={(e) => setShareData({...shareData, shared_with: e.target.value})}
-                                        required
-                                        className="form-control"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Niveau de permission</label>
-                                    <select
-                                        value={shareData.permission_level}
-                                        onChange={(e) => setShareData({...shareData, permission_level: e.target.value})}
-                                        className="form-control"
-                                    >
-                                        <option value="view">Vue seulement</option>
-                                        <option value="edit">Édition</option>
-                                        <option value="manage">Gestion complète</option>
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label>Date d'expiration (optionnel)</label>
-                                    <input
-                                        type="date"
-                                        value={shareData.expires_at}
-                                        onChange={(e) => setShareData({...shareData, expires_at: e.target.value})}
-                                        className="form-control"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Notes (Optionnel)</label>
-                                    <textarea
-                                        value={shareData.notes}
-                                        onChange={(e) => setShareData({...shareData, notes: e.target.value})}
-                                        rows="3"
-                                        className="form-control"
-                                    />
-                                </div>
-                                <div className="modal-actions">
-                                    <button type="button" className="btn-cancel" onClick={hideShareModal}>Annuler</button>
-                                    <button type="submit" className="btn-submit">
-                                        Partager
-                                    </button>
-                                </div>
-                            </form>
-                                        
-                            {/* Existing Shares */}
-                            {documentShares.length > 0 && (
-                                <div className="mt-4">
-                                    <h4>Partages actifs</h4>
-                                    <div className="shares-list">
-                                        {documentShares.map(share => (
-                                            <div key={share.id} className="share-item">
-                                                <div className="share-info">
-                                                    <p><strong>Utilisateur ID:</strong> {share.shared_with}</p>
-                                                    <p><strong>Permission:</strong> {share.permission_level}</p>
-                                                    {share.expires_at && <p><strong>Expire le:</strong> {new Date(share.expires_at).toLocaleDateString()}</p>}
-                                                    {share.notes && <p><strong>Notes:</strong> {share.notes}</p>}
-                                                    <p><small>Partagé le: {new Date(share.shared_at).toLocaleDateString()}</small></p>
-                                                </div>
-                                                <button 
-                                                    className="btn-reject"
-                                                    onClick={() => handleUnshareDocument(share.shared_with)}
-                                                    style={{ minWidth: 'auto', padding: '0.25rem 0.5rem' }}
-                                                >
-                                                    Retirer
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Preview Modal */}
-            {previewDoc && (
-                <div className="modal-overlay" onClick={() => setPreviewDoc(null)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+            {shareModalOpen && currentDocument && (
+                <div className="modal-overlay" onClick={hideShareModal}>
+                    <div className="modal-content upload-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3>Aperçu: {previewDoc.file_name}</h3>
-                            <button className="btn-close" onClick={() => setPreviewDoc(null)}>×</button>
+                            <h3>{t('admin_documents.modal_share_title')}</h3>
+                            <button className="btn-close" onClick={hideShareModal}>×</button>
                         </div>
                         <div className="modal-body">
-                            {renderPreviewContent(previewDoc)}
+                            <form onSubmit={handleShareDocument}>
+                                <div className="form-group">
+                                    <label>{t('admin_documents.label_shared_with')}</label>
+                                    <input type="email" placeholder="Email" value={shareData.shared_with} onChange={(e) => setShareData({ ...shareData, shared_with: e.target.value })} required />
+                                </div>
+                                <div className="form-group">
+                                    <label>{t('admin_documents.label_permission')}</label>
+                                    <select value={shareData.permission_level} onChange={(e) => setShareData({ ...shareData, permission_level: e.target.value })}>
+                                        <option value="view">{t('admin_documents.perm_view')}</option>
+                                        <option value="download">{t('admin_documents.perm_download')}</option>
+                                    </select>
+                                </div>
+                                <div className="modal-actions">
+                                    <button type="button" className="btn-cancel" onClick={hideShareModal}>{t('common.cancel')}</button>
+                                    <button type="submit" className="btn-submit">{t('admin_documents.btn_share')}</button>
+                                </div>
+                            </form>
+                            <div className="shares-list">
+                                <h4>{t('admin_documents.shares_list')}</h4>
+                                {documentShares.length > 0 ? (
+                                    <ul>
+                                        {documentShares.map(share => (
+                                            <li key={share.user_id}>
+                                                {share.user_email} ({share.permission_level})
+                                                <button onClick={() => handleUnshareDocument(share.user_id)} className="btn-delete-share">×</button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : <p>{t('common.none')}</p>}
+                            </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {previewDoc && (
+                <div className="modal-overlay preview-overlay" onClick={() => setPreviewDoc(null)}>
+                    <div className="modal-content preview-content" onClick={e => e.stopPropagation()}>
+                        <button className="btn-close-preview" onClick={() => setPreviewDoc(null)}>×</button>
+                        {previewDoc.mime_type.startsWith('image/') ? (
+                            <img src={`${documentAPI.getDownloadUrl(previewDoc.id)}?token=${localStorage.getItem('token')}`} alt="Preview" className="preview-image" />
+                        ) : previewDoc.mime_type === 'application/pdf' ? (
+                            <iframe src={`${documentAPI.getDownloadUrl(previewDoc.id)}?token=${localStorage.getItem('token')}`} className="preview-iframe" title="PDF Preview" />
+                        ) : (
+                            <p>{t('admin_documents.preview_unavailable')}</p>
+                        )}
                     </div>
                 </div>
             )}

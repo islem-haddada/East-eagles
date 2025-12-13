@@ -117,4 +117,18 @@ export const scheduleAPI = {
   delete: (id) => api.delete(`/admin/schedules/${id}`)
 };
 
+export const announcementAPI = {
+  getAll: () => api.get('/announcements'),
+  create: (data) => api.post('/admin/announcements', data),
+  update: (id, data) => api.put(`/admin/announcements/${id}`, data),
+  delete: (id) => api.delete(`/admin/announcements/${id}`)
+};
+
+export const eventAPI = {
+  getAll: () => api.get('/events'),
+  create: (data) => api.post('/admin/events', data),
+  update: (id, data) => api.put(`/admin/events/${id}`, data),
+  delete: (id) => api.delete(`/admin/events/${id}`)
+};
+
 export default api;

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import './Login.css'; // We'll create this CSS
+import './Login.css';
 
 const Login = () => {
+    const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -18,9 +20,9 @@ const Login = () => {
 
         try {
             await login(email, password);
-            navigate('/'); // Redirect to home/dashboard
+            navigate('/dashboard');
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to login');
+            setError(err.response?.data?.message || t('auth.error_login'));
         } finally {
             setLoading(false);
         }
@@ -29,11 +31,18 @@ const Login = () => {
     return (
         <div className="login-container">
             <div className="login-card">
-                <h2>Connexion Club Sanda</h2>
+                <h2>{t('auth.login_title')}</h2>
                 {error && <div className="error-message">{error}</div>}
+
+                <div className="demo-credentials" style={{ background: '#f8f9fa', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '0.9em', color: '#333' }}>
+                    <strong>{t('auth.demo_credentials')}:</strong><br />
+                    Admin: chef@admin.com / password123<br />
+                    Athlete: chef@athlete.com / password123
+                </div>
+
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label>Email</label>
+                        <label>{t('auth.email')}</label>
                         <input
                             type="email"
                             value={email}
@@ -43,7 +52,7 @@ const Login = () => {
                         />
                     </div>
                     <div className="form-group">
-                        <label>Mot de passe</label>
+                        <label>{t('auth.password')}</label>
                         <input
                             type="password"
                             value={password}
@@ -53,11 +62,11 @@ const Login = () => {
                         />
                     </div>
                     <button type="submit" disabled={loading} className="btn-primary">
-                        {loading ? 'Connexion...' : 'Se connecter'}
+                        {loading ? t('auth.btn_logging_in') : t('auth.btn_login')}
                     </button>
                 </form>
                 <div className="login-footer">
-                    <p>Pas encore de compte ? <Link to="/register">S'inscrire</Link></p>
+                    <p>{t('auth.no_account')} <Link to="/register">{t('auth.link_register')}</Link></p>
                 </div>
             </div>
         </div>

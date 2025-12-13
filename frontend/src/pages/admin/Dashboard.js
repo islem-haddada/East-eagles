@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { athleteAPI, trainingAPI, documentAPI, paymentAPI } from '../../services/api';
 import './Dashboard.css';
 
 const Dashboard = () => {
+    const { t } = useTranslation();
     const [stats, setStats] = useState({
         totalAthletes: 0,
         approvedAthletes: 0,
@@ -79,8 +81,8 @@ const Dashboard = () => {
     return (
         <div className="dashboard">
             <div className="dashboard-header">
-                <h1>📊 Tableau de Bord</h1>
-                <p className="dashboard-subtitle">Vue d'ensemble de votre club</p>
+                <h1>📊 {t('sidebar.dashboard')}</h1>
+                <p className="dashboard-subtitle">{t('admin_dashboard.subtitle')}</p>
             </div>
 
             {/* Main Stats Grid */}
@@ -89,9 +91,9 @@ const Dashboard = () => {
                     <div className="stat-content">
                         <div className="stat-icon">👥</div>
                         <div style={{ flex: 1 }}>
-                            <h3>Total Athlètes</h3>
+                            <h3>{t('admin_dashboard.total_athletes')}</h3>
                             <div className="stat-value">{stats.totalAthletes}</div>
-                            <p className="stat-label">{stats.approvedAthletes} approuvés</p>
+                            <p className="stat-label">{stats.approvedAthletes} {t('admin_dashboard.approved')}</p>
                         </div>
                         <div className="progress-ring">
                             <svg width="60" height="60">
@@ -115,24 +117,24 @@ const Dashboard = () => {
                     <div className="stat-content">
                         <div className="stat-icon">⏳</div>
                         <div style={{ flex: 1 }}>
-                            <h3>En Attente</h3>
+                            <h3>{t('admin_dashboard.pending_validation')}</h3>
                             <div className="stat-value">{stats.pendingAthletes}</div>
-                            <p className="stat-label">À valider</p>
+                            <p className="stat-label">{t('admin_dashboard.pending_validation')}</p>
                         </div>
                     </div>
-                    <Link to="/admin/athletes" className="stat-action">Voir →</Link>
+                    <Link to="/admin/athletes" className="stat-action">{t('common.view_details')} →</Link>
                 </div>
 
                 <div className="stat-card danger">
                     <div className="stat-content">
                         <div className="stat-icon">💰</div>
                         <div style={{ flex: 1 }}>
-                            <h3>Impayés</h3>
+                            <h3>{t('admin_dashboard.unpaid')}</h3>
                             <div className="stat-value">{stats.unpaidAthletes}</div>
-                            <p className="stat-label">Paiements en retard</p>
+                            <p className="stat-label">{t('admin_dashboard.late_payments')}</p>
                         </div>
                     </div>
-                    <Link to="/admin/athletes" className="stat-action">Voir →</Link>
+                    <Link to="/admin/athletes" className="stat-action">{t('common.view_details')} →</Link>
                     <div className="trend-indicator negative">
                         <span className="trend-arrow">↑</span>
                         <span className="trend-value">{safePercentage(stats.unpaidAthletes, stats.totalAthletes)}%</span>
@@ -143,9 +145,9 @@ const Dashboard = () => {
                     <div className="stat-content">
                         <div className="stat-icon">🏋️</div>
                         <div style={{ flex: 1 }}>
-                            <h3>Entraînements</h3>
+                            <h3>{t('admin_dashboard.trainings')}</h3>
                             <div className="stat-value">{stats.upcomingTrainings}</div>
-                            <p className="stat-label">Sessions à venir</p>
+                            <p className="stat-label">{t('admin_dashboard.sessions_upcoming')}</p>
                         </div>
                     </div>
                 </div>
@@ -154,9 +156,9 @@ const Dashboard = () => {
                     <div className="stat-content">
                         <div className="stat-icon">💵</div>
                         <div style={{ flex: 1 }}>
-                            <h3>Paiements</h3>
+                            <h3>{t('admin_dashboard.recent_payments')}</h3>
                             <div className="stat-value">{stats.recentPayments}</div>
-                            <p className="stat-label">Ce mois</p>
+                            <p className="stat-label">{t('admin_dashboard.this_month')}</p>
                         </div>
                     </div>
                     <div className="trend-indicator positive">
@@ -169,22 +171,22 @@ const Dashboard = () => {
                     <div className="stat-content">
                         <div className="stat-icon">📄</div>
                         <div style={{ flex: 1 }}>
-                            <h3>Documents</h3>
+                            <h3>{t('sidebar.documents')}</h3>
                             <div className="stat-value">{stats.pendingDocuments}</div>
-                            <p className="stat-label">À vérifier</p>
+                            <p className="stat-label">{t('admin_dashboard.documents_verify')}</p>
                         </div>
                     </div>
-                    <Link to="/admin/documents" className="stat-action">Voir →</Link>
+                    <Link to="/admin/documents" className="stat-action">{t('common.view_details')} →</Link>
                 </div>
             </div>
 
             {/* Charts Section */}
             <div className="charts-section">
                 <div className="chart-card">
-                    <h3>📊 Répartition des Athlètes</h3>
+                    <h3>📊 {t('admin_dashboard.athletes_breakdown')}</h3>
                     <div className="bar-chart">
                         <div className="bar-item">
-                            <div className="bar-label">Approuvés</div>
+                            <div className="bar-label">{t('admin_dashboard.approved')}</div>
                             <div className="bar-container">
                                 <div
                                     className="bar-fill success"
@@ -195,7 +197,7 @@ const Dashboard = () => {
                             </div>
                         </div>
                         <div className="bar-item">
-                            <div className="bar-label">En attente</div>
+                            <div className="bar-label">{t('admin_dashboard.pending_validation')}</div>
                             <div className="bar-container">
                                 <div
                                     className="bar-fill warning"
@@ -206,7 +208,7 @@ const Dashboard = () => {
                             </div>
                         </div>
                         <div className="bar-item">
-                            <div className="bar-label">Impayés</div>
+                            <div className="bar-label">{t('admin_dashboard.unpaid')}</div>
                             <div className="bar-container">
                                 <div
                                     className="bar-fill danger"
@@ -220,7 +222,7 @@ const Dashboard = () => {
                 </div>
 
                 <div className="chart-card">
-                    <h3>🎯 Taux de Paiement</h3>
+                    <h3>🎯 {t('admin_dashboard.payment_rate')}</h3>
                     <div className="progress-circle-container">
                         <svg className="progress-circle" width="200" height="200">
                             <circle cx="100" cy="100" r="80" fill="none" stroke="#e5e7eb" strokeWidth="15"></circle>
@@ -239,7 +241,7 @@ const Dashboard = () => {
                             <div className="progress-percentage">
                                 {safePercentage(stats.totalAthletes - stats.unpaidAthletes, stats.totalAthletes)}%
                             </div>
-                            <div className="progress-text">Payés</div>
+                            <div className="progress-text">{t('admin_dashboard.paid')}</div>
                         </div>
                     </div>
                 </div>

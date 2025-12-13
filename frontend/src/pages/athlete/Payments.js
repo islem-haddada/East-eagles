@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { paymentAPI } from '../../services/api';
 import './Payments.css';
 
 const AthletePayments = () => {
+    const { t, i18n } = useTranslation();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [subscription, setSubscription] = useState(null);
@@ -44,65 +46,67 @@ const AthletePayments = () => {
         fetchPayments();
     }, []);
 
+    const locale = i18n.language === 'ar' ? 'ar-EG' : 'fr-FR';
+
     if (loading) return <div className="loading-spinner"><div className="spinner"></div></div>;
 
     return (
         <div className="athlete-payments-page">
-            <h1>Mes Paiements</h1>
+            <h1>{t('athlete_payments.title')}</h1>
 
             {/* Subscription Status Card */}
             <div className={`status-card ${subscription?.status}`}>
                 <div className="status-header">
-                    <h2>Statut Abonnement</h2>
+                    <h2>{t('athlete_payments.subscription_status')}</h2>
                     <span className={`badge ${subscription?.status}`}>
-                        {subscription?.status === 'active' ? 'ACTIF' : 'EXPIRÉ'}
+                        {subscription?.status === 'active' ? t('athlete_dashboard.active') : t('athlete_dashboard.expired')}
                     </span>
                 </div>
                 <div className="status-body">
                     {subscription?.expiryDate ? (
                         <>
                             <p className="expiry-date">
-                                Expire le : <strong>{subscription.expiryDate.toLocaleDateString()}</strong>
+                                {t('athlete_payments.expires_on')}: <strong>{subscription.expiryDate.toLocaleDateString(locale)}</strong>
                             </p>
                             <p className="days-remaining">
                                 {subscription.daysLeft > 0
-                                    ? `${subscription.daysLeft} jours restants`
-                                    : `Expiré depuis ${Math.abs(subscription.daysLeft)} jours`}
+                                    ? `${subscription.daysLeft} ${t('athlete_dashboard.days_left')}`
+                                    : `${t('athlete_dashboard.expired_since')} ${Math.abs(subscription.daysLeft)} ${t('common.days') || 'jours'}`}
                             </p>
                         </>
                     ) : (
-                        <p>Aucun abonnement actif. Veuillez régler votre cotisation auprès de l'administration.</p>
+                        <p>{t('athlete_payments.no_active_subscription')}</p>
                     )}
                 </div>
             </div>
 
             {/* Payment History */}
             <div className="history-section">
-                <h2>Historique des Transactions</h2>
+                <h2>{t('athlete_payments.transaction_history')}</h2>
                 <div className="table-responsive">
                     <table>
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Montant</th>
-                                <th>Période</th>
-                                <th>Validité</th>
-                                <th>Notes</th>
+                                <th>{t('athlete_payments.date')}</th>
+                                <th>{t('athlete_payments.amount')}</th>
+                                <th>{t('athlete_payments.period')}</th>
+                                <th>{t('athlete_payments.validity')}</th>
+                                <th>{t('athlete_payments.notes')}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {payments.map(p => (
                                 <tr key={p.id}>
-                                    <td>{new Date(p.payment_date).toLocaleDateString()}</td>
+                                    <td>{new Date(p.payment_date).toLocaleDateString(locale)}</td>
                                     <td className="amount">{p.amount} DA</td>
-                                    <td>{p.months_covered} mois</td>
+                                    <td>{p.months_covered} {t('common.months') || 'mois'}</td>
                                     <td>{p.start_date} au {p.end_date}</td>
                                     <td>{p.notes || '-'}</td>
                                 </tr>
                             ))}
                             {payments.length === 0 && (
                                 <tr>
-                                    <td colSpan="5" style={{ textAlign: 'center' }}>Aucun paiement enregistré.</td>
+                                    <td colSpan="5" style={{ textAlign: 'center' }}>{t('athlete_payments.no_payments')}</td>
                                 </tr>
                             )}
                         </tbody>

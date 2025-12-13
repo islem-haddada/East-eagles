@@ -265,6 +265,8 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
     border: 1px solid rgba(0, 0, 0, 0.05);
     transition: all 0.3s ease;
+    flex-wrap: wrap;
+    /* Allow wrapping */
 }
 
 .document-card:hover {
@@ -322,6 +324,13 @@
     font-size: 0.85rem;
     color: var(--text-secondary);
     margin-bottom: 0.5rem;
+    line-height: 1.5;
+}
+
+.doc-info {
+    flex: 1;
+    min-width: 200px;
+    /* Further reduce for better fit */
 }
 
 .doc-info .expiry-status {
@@ -375,8 +384,11 @@
 
 .doc-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 1rem;
     margin-left: auto;
+    flex-wrap: wrap;
+    /* Allow buttons to wrap */
+    justify-content: flex-end;
 }
 
 .doc-actions button {
@@ -786,6 +798,65 @@
     background: #f8fafc;
 }
 
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .bulk-athlete-selection {
+        max-height: 200px;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+    }
+
+    .compliance-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .folder-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .header-left {
+        flex-wrap: wrap;
+    }
+
+    .doc-actions {
+        justify-content: flex-start;
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .document-card {
+        padding: 1rem;
+        gap: 1rem;
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .doc-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.8rem;
+        margin: 0 auto;
+    }
+
+    .doc-info {
+        width: 100%;
+        text-align: center;
+    }
+
+    .doc-actions {
+        justify-content: center;
+        margin-left: 0;
+        width: 100%;
+        gap: 0.5rem;
+    }
+}
+
 .bulk-athlete-item {
     padding: 0.75rem;
     border-radius: 8px;
@@ -926,55 +997,76 @@
     .documents-page {
         padding: 1rem;
     }
-    
+
     .document-card {
         flex-direction: column;
         align-items: flex-start;
         gap: 1rem;
     }
-    
+
     .doc-actions {
         margin-left: 0;
         width: 100%;
         justify-content: flex-end;
     }
-    
+
     .folder-header {
         flex-direction: column;
         align-items: stretch;
     }
-    
+
     .header-left {
         flex-direction: column;
         align-items: flex-start;
     }
-    
+
     .controls-bar {
         flex-direction: column;
         align-items: stretch;
     }
-    
+
     .search-container {
         min-width: auto;
     }
-    
+
     .form-group input[type="date"] {
         width: 100%;
         min-width: auto;
     }
-    
+
     .filters {
         flex-direction: column;
         align-items: stretch;
     }
-    
+
     .filter-select {
         min-width: auto;
     }
-    
+
     .share-item {
         flex-direction: column;
         align-items: flex-start;
         gap: 1rem;
+    }
+}
+
+/* Document Card Responsive Fixes */
+@media (max-width: 1024px) {
+    .document-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .doc-actions {
+        margin-left: 0;
+        justify-content: flex-end;
+        /* Keep buttons right-aligned */
+        margin-top: 1rem;
+        width: 100%;
+    }
+
+    .doc-info {
+        width: 100%;
     }
 }

@@ -1,36 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { trainingAPI, documentAPI, paymentAPI, scheduleAPI } from '../../services/api';
 import './AthleteDashboard.css';
 
 const Dashboard = () => {
     const { user } = useAuth();
+    const { t, i18n } = useTranslation();
     const [upcomingTrainings, setUpcomingTrainings] = useState([]);
     const [documents, setDocuments] = useState([]);
     const [athleteInfo, setAthleteInfo] = useState(null);
     const [subscription, setSubscription] = useState(null);
-    const [weeklySchedule, setWeeklySchedule] = useState([]);
-    const [trainingHistory, setTrainingHistory] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [trainingsRes, docsRes, historyRes, paymentsRes, scheduleRes] = await Promise.all([
+                const [trainingsRes, docsRes, historyRes, paymentsRes] = await Promise.all([
                     trainingAPI.getUpcoming(),
                     documentAPI.getByAthlete(user.id),
                     trainingAPI.getHistory(),
-                    paymentAPI.getMyPayments(),
-                    scheduleAPI.getAll()
+                    paymentAPI.getMyPayments()
                 ]);
-
-                console.log('🔍 Schedule data received:', scheduleRes.data);
 
                 setUpcomingTrainings(trainingsRes.data?.slice(0, 5) || []);
                 setDocuments(docsRes.data || []);
-                setWeeklySchedule(scheduleRes.data || []);
-                setTrainingHistory(historyRes.data || []);
 
                 // Calculate stats
                 const history = historyRes.data || [];
@@ -86,51 +81,33 @@ const Dashboard = () => {
         return Math.round((value / total) * 100);
     };
 
-    // Calculate attendance trend for the last 5 sessions
-    const calculateAttendanceTrend = () => {
-        if (!trainingHistory || trainingHistory.length === 0) return [];
-        
-        // Sort by date descending and take last 5
-        const sorted = [...trainingHistory].sort((a, b) => 
-            new Date(b.session_date) - new Date(a.session_date)
-        ).slice(0, 5);
-        
-        return sorted.map(session => ({
-            date: new Date(session.session_date).toLocaleDateString('fr-FR', { 
-                day: 'numeric', 
-                month: 'short' 
-            }),
-            attended: session.attended ? 1 : 0
-        })).reverse(); // Reverse to show chronological order
-    };
-
-    const attendanceTrend = calculateAttendanceTrend();
-
     if (loading) return <div className="loading-spinner"><div className="spinner"></div></div>;
 
     const pendingDocs = documents.filter(d => d.validation_status === 'pending').length;
     const validatedDocs = documents.filter(d => d.validation_status === 'validated').length;
+
+    const locale = i18n.language === 'ar' ? 'ar-EG' : 'fr-FR';
 
     return (
         <div className="athlete-dashboard">
             {/* Welcome Section */}
             <div className="welcome-section">
                 <div className="welcome-content">
-                    <h1>👋 Bonjour, {user.first_name || user.email?.split('@')[0]}</h1>
-                    <p className="welcome-subtitle">Bienvenue sur votre tableau de bord personnel</p>
+                    <h1>👋 {user.first_name || user.email?.split('@')[0]}</h1>
+                    <p className="welcome-subtitle">{t('athlete_dashboard.welcome_subtitle')}</p>
                 </div>
                 <div className="quick-actions">
                     <Link to="/athlete/profile" className="action-btn primary">
                         <span className="action-icon">👤</span>
-                        <span>Mon Profil</span>
+                        <span>{t('sidebar.my_profile')}</span>
                     </Link>
                     <Link to="/athlete/trainings" className="action-btn secondary">
                         <span className="action-icon">🏋️</span>
-                        <span>Mes Entraînements</span>
+                        <span>{t('sidebar.my_trainings')}</span>
                     </Link>
                     <Link to="/athlete/payments" className="action-btn tertiary">
                         <span className="action-icon">💳</span>
-                        <span>Mes Paiements</span>
+                        <span>{t('sidebar.my_payments')}</span>
                     </Link>
                 </div>
             </div>
@@ -138,26 +115,26 @@ const Dashboard = () => {
             {athleteInfo?.status === 'pending' && (
                 <div className="alert-banner warning">
                     <span className="alert-icon">⏳</span>
-                    <span>Votre inscription est en attente de validation par un administrateur.</span>
+                    <span>{t('athlete_dashboard.pending_validation')}</span>
                 </div>
             )}
 
             {/* Quick Stats Overview */}
             <div className="stats-overview">
-                <h2>📊 Vue d'ensemble</h2>
+                <h2>📊 {t('athlete_dashboard.overview')}</h2>
                 <div className="stats-grid">
                     <div className={`stat-card ${subscription?.status === 'active' ? 'success' : 'danger'}`}>
                         <div className="stat-icon">💳</div>
                         <div className="stat-content">
-                            <h3>Abonnement</h3>
+                            <h3>{t('athlete_dashboard.subscription')}</h3>
                             <div className="stat-value">
-                                {subscription?.status === 'active' ? 'ACTIF' : 'EXPIRÉ'}
+                                {subscription?.status === 'active' ? t('athlete_dashboard.active') : t('athlete_dashboard.expired')}
                             </div>
                             {subscription?.expiryDate && (
                                 <p className="stat-label">
                                     {subscription.daysLeft > 0
-                                        ? `${subscription.daysLeft} jours restants`
-                                        : `Expiré depuis ${Math.abs(subscription.daysLeft)} jours`}
+                                        ? `${subscription.daysLeft} ${t('athlete_dashboard.days_left')}`
+                                        : `${t('athlete_dashboard.expired_since')} ${Math.abs(subscription.daysLeft)} ${t('common.days') || 'jours'}`}
                                 </p>
                             )}
                         </div>
@@ -169,9 +146,9 @@ const Dashboard = () => {
                     <div className="stat-card primary">
                         <div className="stat-icon">🏋️</div>
                         <div className="stat-content">
-                            <h3>Séances Suivies</h3>
+                            <h3>{t('athlete_dashboard.attended_sessions')}</h3>
                             <div className="stat-value">{athleteInfo?.stats?.attended || 0}</div>
-                            <p className="stat-label">Sur {athleteInfo?.stats?.total || 0} total</p>
+                            <p className="stat-label">Sur {athleteInfo?.stats?.total || 0} {t('athlete_dashboard.total')}</p>
                         </div>
                         <div className="progress-ring">
                             <svg width="60" height="60">
@@ -195,108 +172,30 @@ const Dashboard = () => {
                     <div className="stat-card info">
                         <div className="stat-icon">📅</div>
                         <div className="stat-content">
-                            <h3>Prochaines Séances</h3>
+                            <h3>{t('athlete_dashboard.upcoming_sessions')}</h3>
                             <div className="stat-value">{upcomingTrainings.length}</div>
-                            <p className="stat-label">À venir</p>
+                            <p className="stat-label">{t('athlete_dashboard.coming_up')}</p>
                         </div>
-                        <Link to="/athlete/trainings" className="stat-action">Voir →</Link>
+                        <Link to="/athlete/trainings" className="stat-action">{t('common.view_details')} →</Link>
                     </div>
 
                     <div className="stat-card warning">
                         <div className="stat-icon">📄</div>
                         <div className="stat-content">
-                            <h3>Documents</h3>
+                            <h3>{t('athlete_dashboard.documents_stat')}</h3>
                             <div className="stat-value">{documents.length}</div>
-                            <p className="stat-label">{validatedDocs} validés • {pendingDocs} en attente</p>
+                            <p className="stat-label">{validatedDocs} {t('athlete_dashboard.validated')} • {pendingDocs} {t('athlete_dashboard.pending')}</p>
                         </div>
-                        <Link to="/athlete/profile" className="stat-action">Gérer →</Link>
+                        <Link to="/athlete/profile" className="stat-action">{t('athlete_dashboard.manage')} →</Link>
                     </div>
                 </div>
-            </div>
-
-            {/* Performance Chart */}
-            <div className="section-card">
-                <div className="section-header">
-                    <h2>📈 Tendance de Participation</h2>
-                </div>
-                {attendanceTrend.length > 0 ? (
-                    <div className="performance-chart">
-                        <div className="chart-container">
-                            <div className="chart-bars">
-                                {attendanceTrend.map((item, index) => (
-                                    <div key={index} className="chart-bar-container">
-                                        <div 
-                                            className={`chart-bar ${item.attended ? 'attended' : 'missed'}`}
-                                            style={{ height: item.attended ? '100%' : '20%' }}
-                                        ></div>
-                                        <div className="chart-label">{item.date}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="chart-legend">
-                            <div className="legend-item">
-                                <div className="legend-color attended"></div>
-                                <span>Présent</span>
-                            </div>
-                            <div className="legend-item">
-                                <div className="legend-color missed"></div>
-                                <span>Absent</span>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="empty-state">
-                        <span className="empty-icon">📊</span>
-                        <p>Aucune donnée de participation disponible</p>
-                    </div>
-                )}
-            </div>
-
-            {/* Weekly Schedule */}
-            <div className="section-card">
-                <div className="section-header">
-                    <h2>📅 Planning Hebdomadaire</h2>
-                    <Link to="/athlete/trainings" className="btn-link">Voir détails →</Link>
-                </div>
-                {weeklySchedule.length > 0 ? (
-                    <div className="schedule-week">
-                        {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
-                            const dayLabels = {
-                                'Monday': 'Lundi', 'Tuesday': 'Mardi', 'Wednesday': 'Mercredi',
-                                'Thursday': 'Jeudi', 'Friday': 'Vendredi', 'Saturday': 'Samedi', 'Sunday': 'Dimanche'
-                            };
-                            const slot = weeklySchedule.find(s => s.day_of_week === day);
-                            
-                            // Debug log
-                            if (slot) {
-                                console.log(`🔍 Slot for ${day}:`, slot);
-                            }
-                            
-                            return (
-                                <div key={day} className={`schedule-day ${slot ? 'has-schedule' : ''}`}>
-                                    <div className="day-header">{dayLabels[day]}</div>
-                                    <div className="day-content">
-                                        {slot ? `${slot.start_time} (${slot.duration_minutes} min)` : '-'}
-                                    </div>
-                                    {slot && <div className="day-title">{slot.title}</div>}
-                                </div>
-                            );
-                        })}
-                    </div>
-                ) : (
-                    <div className="empty-state">
-                        <span className="empty-icon">📅</span>
-                        <p>Aucun planning hebdomadaire défini</p>
-                    </div>
-                )}
             </div>
 
             {/* Upcoming Trainings */}
             <div className="section-card">
                 <div className="section-header">
-                    <h2>📋 Prochains Entraînements</h2>
-                    <Link to="/athlete/trainings" className="btn-link">Voir tout →</Link>
+                    <h2>📋 {t('athlete_dashboard.upcoming_title')}</h2>
+                    <Link to="/athlete/trainings" className="btn-link">{t('athlete_dashboard.view_all')} →</Link>
                 </div>
                 <div className="trainings-list">
                     {upcomingTrainings.map(session => (
@@ -304,7 +203,7 @@ const Dashboard = () => {
                             <div className="training-date">
                                 <div className="day">{new Date(session.session_date).getDate()}</div>
                                 <div className="month">
-                                    {new Date(session.session_date).toLocaleDateString('fr', { month: 'short' })}
+                                    {new Date(session.session_date).toLocaleDateString(locale, { month: 'short' })}
                                 </div>
                             </div>
                             <div className="training-info">
@@ -313,52 +212,18 @@ const Dashboard = () => {
                                 <p><span className="icon">🥋</span> {session.level}</p>
                             </div>
                             <div className="training-time">
-                                {new Date(session.session_date).toLocaleTimeString('fr', { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(session.session_date).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                             </div>
                         </div>
                     ))}
                     {upcomingTrainings.length === 0 && (
                         <div className="empty-state">
                             <span className="empty-icon">🏃</span>
-                            <p>Aucun entraînement prévu pour le moment</p>
+                            <p>{t('athlete_dashboard.no_upcoming')}</p>
                         </div>
                     )}
                 </div>
             </div>
-
-            {/* Payment Status */}
-            {subscription?.expiryDate && (
-                <div className="section-card">
-                    <div className="section-header">
-                        <h2>💰 Statut de Paiement</h2>
-                        <Link to="/athlete/payments" className="btn-link">Historique →</Link>
-                    </div>
-                    <div className="payment-status">
-                        <div className="payment-info">
-                            <div className="payment-detail">
-                                <span className="label">Date d'expiration</span>
-                                <span className="value">{subscription.expiryDate.toLocaleDateString('fr', {
-                                    day: 'numeric',
-                                    month: 'long',
-                                    year: 'numeric'
-                                })}</span>
-                            </div>
-                            {subscription.daysLeft <= 7 && subscription.daysLeft > 0 && (
-                                <div className="alert-banner danger">
-                                    <span className="alert-icon">⚠️</span>
-                                    <span>Votre abonnement expire bientôt ! Pensez à renouveler.</span>
-                                </div>
-                            )}
-                            {subscription.daysLeft <= 0 && (
-                                <div className="alert-banner danger">
-                                    <span className="alert-icon">⚠️</span>
-                                    <span>Votre abonnement a expiré ! Veuillez renouveler pour continuer.</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

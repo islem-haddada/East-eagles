@@ -796,6 +796,31 @@ select {
     .profile-tabs {
         overflow-x: auto;
         white-space: nowrap;
+        padding-bottom: 5px;
+        /* Scrollbar space */
+    }
+
+    .athlete-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .avatar-placeholder {
+        margin-right: 0;
+        margin-bottom: 1rem;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .upload-card {
+        padding: 1rem;
+    }
+
+    .file-input {
+        width: 100%;
     }
 }
 

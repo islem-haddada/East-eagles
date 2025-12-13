@@ -434,4 +434,26 @@ td>div {
     .filter-select {
         width: 100%;
     }
+
+    /* Modal Responsive */
+    .modal-content.details-modal {
+        width: 95%;
+        max-height: 85vh;
+        margin: 1rem;
+    }
+
+    .profile-header-section {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+
+    .details-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .details-section.full-width {
+        grid-column: auto;
+    }
 }

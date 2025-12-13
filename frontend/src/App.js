@@ -6,6 +6,7 @@ import { ConfirmProvider } from './context/ConfirmContext';
 import './styles/global.css';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Home from './pages/Home';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/admin/Dashboard';
 import Athletes from './pages/admin/Athletes';
@@ -41,8 +42,6 @@ const RoleRedirect = () => {
   return <Navigate to="/athlete" replace />;
 };
 
-
-
 function App() {
   return (
     <AuthProvider>
@@ -51,10 +50,14 @@ function App() {
           <Router>
             <div className="App">
               <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+
+                {/* Redirect Logic Route */}
                 <Route
-                  path="/"
+                  path="/dashboard"
                   element={
                     <PrivateRoute>
                       <RoleRedirect />

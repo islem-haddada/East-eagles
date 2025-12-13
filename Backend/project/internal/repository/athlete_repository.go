@@ -18,11 +18,11 @@ func NewAthleteRepository(db *sql.DB) *AthleteRepository {
 func (r *AthleteRepository) GetAll() ([]models.Athlete, error) {
 	query := `
 		SELECT a.id, a.first_name, a.last_name, a.email, a.phone, 
-		       a.address, a.city, a.postal_code,
+		       COALESCE(a.address, ''), COALESCE(a.city, ''), COALESCE(a.postal_code, ''),
 		       a.registration_date, a.is_active, a.created_at,
-		       a.birth_date, a.gender, a.nationality,
-		       a.weight, a.weight_category, a.belt_level, a.skill_level, a.experience_years,
-		       a.emergency_contact_name, a.emergency_contact_phone, a.emergency_contact_relation,
+		       a.birth_date, COALESCE(a.gender, ''), COALESCE(a.nationality, ''),
+		       a.weight, COALESCE(a.weight_category, ''), COALESCE(a.belt_level, ''), COALESCE(a.skill_level, ''), a.experience_years,
+		       COALESCE(a.emergency_contact_name, ''), COALESCE(a.emergency_contact_phone, ''), COALESCE(a.emergency_contact_relation, ''),
 		       a.membership_status, a.approved_by, a.approved_at, COALESCE(a.rejection_reason, ''),
 		       COALESCE(a.medical_conditions, ''), COALESCE(a.allergies, ''), COALESCE(a.blood_type, ''), COALESCE(a.photo_url, ''),
 		       p.end_date AS payment_end_date,
@@ -87,11 +87,11 @@ func (r *AthleteRepository) GetAll() ([]models.Athlete, error) {
 func (r *AthleteRepository) GetPending() ([]models.Athlete, error) {
 	query := `
 		SELECT id, first_name, last_name, email, phone, 
-		       address, city, postal_code,
+		       COALESCE(address, ''), COALESCE(city, ''), COALESCE(postal_code, ''),
 		       registration_date, is_active, created_at,
-		       birth_date, gender, nationality,
-		       weight, weight_category, belt_level, skill_level, experience_years,
-		       emergency_contact_name, emergency_contact_phone, emergency_contact_relation,
+		       birth_date, COALESCE(gender, ''), COALESCE(nationality, ''),
+		       weight, COALESCE(weight_category, ''), COALESCE(belt_level, ''), COALESCE(skill_level, ''), experience_years,
+		       COALESCE(emergency_contact_name, ''), COALESCE(emergency_contact_phone, ''), COALESCE(emergency_contact_relation, ''),
 		       membership_status, approved_by, approved_at, COALESCE(rejection_reason, ''),
 		       COALESCE(medical_conditions, ''), COALESCE(allergies, ''), COALESCE(blood_type, ''), COALESCE(photo_url, '')
 		FROM athletes
@@ -131,11 +131,11 @@ func (r *AthleteRepository) GetPending() ([]models.Athlete, error) {
 func (r *AthleteRepository) GetByID(id int) (*models.Athlete, error) {
 	query := `
 		SELECT id, first_name, last_name, email, phone, 
-		       address, city, postal_code,
+		       COALESCE(address, ''), COALESCE(city, ''), COALESCE(postal_code, ''),
 		       registration_date, is_active, created_at,
-		       birth_date, gender, nationality,
-		       weight, weight_category, belt_level, skill_level, experience_years,
-		       emergency_contact_name, emergency_contact_phone, emergency_contact_relation,
+		       birth_date, COALESCE(gender, ''), COALESCE(nationality, ''),
+		       weight, COALESCE(weight_category, ''), COALESCE(belt_level, ''), COALESCE(skill_level, ''), experience_years,
+		       COALESCE(emergency_contact_name, ''), COALESCE(emergency_contact_phone, ''), COALESCE(emergency_contact_relation, ''),
 		       membership_status, approved_by, approved_at, COALESCE(rejection_reason, ''),
 		       COALESCE(medical_conditions, ''), COALESCE(allergies, ''), COALESCE(blood_type, ''), COALESCE(photo_url, '')
 		FROM athletes WHERE id = $1
@@ -164,11 +164,11 @@ func (r *AthleteRepository) GetByID(id int) (*models.Athlete, error) {
 func (r *AthleteRepository) GetByEmail(email string) (*models.Athlete, error) {
 	query := `
 		SELECT id, first_name, last_name, email, phone, 
-		       address, city, postal_code,
+		       COALESCE(address, ''), COALESCE(city, ''), COALESCE(postal_code, ''),
 		       registration_date, is_active, created_at,
-		       birth_date, gender, nationality,
-		       weight, weight_category, belt_level, skill_level, experience_years,
-		       emergency_contact_name, emergency_contact_phone, emergency_contact_relation,
+		       birth_date, COALESCE(gender, ''), COALESCE(nationality, ''),
+		       weight, COALESCE(weight_category, ''), COALESCE(belt_level, ''), COALESCE(skill_level, ''), experience_years,
+		       COALESCE(emergency_contact_name, ''), COALESCE(emergency_contact_phone, ''), COALESCE(emergency_contact_relation, ''),
 		       membership_status, approved_by, approved_at, COALESCE(rejection_reason, ''),
 		       COALESCE(medical_conditions, ''), COALESCE(allergies, ''), COALESCE(blood_type, ''), COALESCE(photo_url, '')
 		FROM athletes WHERE email = $1
@@ -205,7 +205,7 @@ func (r *AthleteRepository) Create(req *models.CreateAthleteRequest) (*models.At
 			medical_conditions, allergies, blood_type,
 			membership_status, photo_url
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, 'pending', $22)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, '')::date, NULLIF($9, ''), $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, 'pending', $22)
 		RETURNING id, first_name, last_name, email, phone, 
 		          address, city, postal_code,
 		          registration_date, is_active, created_at,
@@ -321,17 +321,17 @@ func (r *AthleteRepository) Update(id int, req *models.CreateAthleteRequest) (*m
 		    gender = COALESCE(NULLIF($9, ''), gender),
 		    nationality = $10,
 		    weight = $11, weight_category = $12,
-		    belt_level = $13, skill_level = $14, experience_years = $15,
+		    belt_level = NULLIF($13, ''), skill_level = NULLIF($14, ''), experience_years = $15,
 		    emergency_contact_name = $16, emergency_contact_phone = $17, emergency_contact_relation = $18,
 		    medical_conditions = NULLIF($19, ''), allergies = NULLIF($20, ''), blood_type = NULLIF($21, ''),
 		    photo_url = COALESCE(NULLIF($23, ''), photo_url)
 		WHERE id = $22
 		RETURNING id, first_name, last_name, email, phone, 
-		          address, city, postal_code,
+		          COALESCE(address, ''), COALESCE(city, ''), COALESCE(postal_code, ''),
 		          registration_date, is_active, created_at,
-		          birth_date, gender, nationality,
-		          weight, weight_category, belt_level, skill_level, experience_years,
-		          emergency_contact_name, emergency_contact_phone, emergency_contact_relation,
+		          birth_date, COALESCE(gender, ''), COALESCE(nationality, ''),
+		          weight, COALESCE(weight_category, ''), COALESCE(belt_level, ''), COALESCE(skill_level, ''), experience_years,
+		          COALESCE(emergency_contact_name, ''), COALESCE(emergency_contact_phone, ''), COALESCE(emergency_contact_relation, ''),
 		          membership_status, approved_by, approved_at, COALESCE(rejection_reason, ''),
 		          COALESCE(medical_conditions, ''), COALESCE(allergies, ''), COALESCE(blood_type, ''), COALESCE(photo_url, '')
 	`
@@ -368,7 +368,7 @@ func (r *AthleteRepository) Update(id int, req *models.CreateAthleteRequest) (*m
 func (r *AthleteRepository) Search(query string) ([]models.Athlete, error) {
 	searchQuery := `
 		SELECT id, first_name, last_name, email, phone, 
-		       address, city, postal_code,
+		       COALESCE(address, ''), COALESCE(city, ''), COALESCE(postal_code, ''),
 		       registration_date, is_active, created_at,
 		       membership_status
 		FROM athletes

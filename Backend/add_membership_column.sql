@@ -1,0 +1,1 @@
+ALTER TABLE athletes ADD COLUMN IF NOT EXISTS membership_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (membership_status IN ('pending', 'approved', 'rejected', 'suspended', 'expired'));

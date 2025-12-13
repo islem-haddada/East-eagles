@@ -479,6 +479,7 @@ func (h *DocumentHandler) Validate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.Validate(id, adminID); err != nil {
+		fmt.Printf("ERROR Validating Document ID %d by Admin %d: %v\n", id, adminID, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

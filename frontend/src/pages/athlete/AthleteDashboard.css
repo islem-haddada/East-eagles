@@ -298,81 +298,6 @@
     color: #2563eb;
 }
 
-/* Performance Chart */
-.performance-chart {
-    padding: 1rem 0;
-}
-
-.chart-container {
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    height: 150px;
-    padding: 1rem 0;
-}
-
-.chart-bars {
-    display: flex;
-    align-items: flex-end;
-    gap: 1.5rem;
-    height: 100%;
-}
-
-.chart-bar-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.chart-bar {
-    width: 30px;
-    border-radius: 4px;
-    transition: height 0.5s ease;
-}
-
-.chart-bar.attended {
-    background: linear-gradient(to top, #10b981, #34d399);
-}
-
-.chart-bar.missed {
-    background: linear-gradient(to top, #ef4444, #f87171);
-}
-
-.chart-label {
-    font-size: 0.75rem;
-    color: #6b7280;
-    text-align: center;
-}
-
-.chart-legend {
-    display: flex;
-    justify-content: center;
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.875rem;
-    color: #6b7280;
-}
-
-.legend-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 2px;
-}
-
-.legend-color.attended {
-    background: #10b981;
-}
-
-.legend-color.missed {
-    background: #ef4444;
-}
 
 /* Trainings List */
 .trainings-list {
@@ -450,85 +375,9 @@
     font-size: 0.875rem;
 }
 
-/* Weekly Schedule */
-.schedule-week {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.75rem;
-}
 
-.schedule-day {
-    background: #f9fafb;
-    border-radius: 8px;
-    padding: 1rem;
-    text-align: center;
-    border: 2px solid transparent;
-    transition: all 0.2s;
-}
 
-.schedule-day:hover {
-    border-color: #3b82f6;
-    background: #f0f7ff;
-}
 
-.day-header {
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin-bottom: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.day-content {
-    font-size: 0.875rem;
-    color: #3b82f6;
-    font-weight: 600;
-}
-
-.schedule-day.has-schedule {
-    background: linear-gradient(135deg, #f0f7ff 0%, #e0efff 100%);
-    border-color: #3b82f6;
-}
-
-.day-title {
-    font-size: 0.75rem;
-    color: #6b7280;
-    margin-top: 0.5rem;
-    font-weight: 500;
-}
-
-/* Payment Status */
-.payment-status {
-    padding: 1rem 0;
-}
-
-.payment-info {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.payment-detail {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background: #f9fafb;
-    border-radius: 8px;
-}
-
-.payment-detail .label {
-    color: #6b7280;
-    font-size: 0.875rem;
-    font-weight: 600;
-}
-
-.payment-detail .value {
-    color: #1f2937;
-    font-size: 1rem;
-    font-weight: 700;
-}
 
 /* Empty State */
 .empty-state {
@@ -571,47 +420,24 @@
     .athlete-dashboard {
         padding: 1rem;
     }
-    
+
     .welcome-section {
         flex-direction: column;
         gap: 1.5rem;
         text-align: center;
     }
-    
+
     .quick-actions {
         width: 100%;
         justify-content: center;
     }
-    
+
     .stats-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .training-item {
         flex-wrap: wrap;
     }
-    
-    .payment-detail {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-    
-    .schedule-week {
-        grid-template-columns: 1fr;
-    }
-    
-    .chart-bars {
-        gap: 1rem;
-    }
-    
-    .chart-bar {
-        width: 20px;
-    }
-    
-    .chart-legend {
-        flex-direction: column;
-        align-items: center;
-        gap: 0.75rem;
-    }
+
 }

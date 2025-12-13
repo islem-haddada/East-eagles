@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { athleteAPI } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import './Athletes.css';
 
 const Athletes = () => {
+    const { t, i18n } = useTranslation();
     const notify = useNotification();
     const confirm = useConfirm();
     const [athletes, setAthletes] = useState([]);
@@ -30,11 +32,11 @@ const Athletes = () => {
 
     const handleApprove = async (id) => {
         const confirmed = await confirm(
-            'Êtes-vous sûr de vouloir approuver cet athlète ?',
+            t('admin_athletes.confirm_approve'),
             {
-                title: 'Approuver l\'athlète',
-                confirmText: 'Approuver',
-                cancelText: 'Annuler',
+                title: t('admin_athletes.confirm_approve_title'),
+                confirmText: t('common.validate'),
+                cancelText: t('common.cancel'),
                 type: 'info'
             }
         );
@@ -48,7 +50,7 @@ const Athletes = () => {
     };
 
     const handleReject = async (id) => {
-        const reason = prompt('Raison du rejet :');
+        const reason = prompt(t('admin_athletes.reject_reason'));
         if (reason === null) return; // Cancelled
         try {
             await athleteAPI.reject(id, reason);
@@ -60,11 +62,11 @@ const Athletes = () => {
 
     const handleDelete = async (id) => {
         const confirmed = await confirm(
-            'Êtes-vous sûr de vouloir supprimer cet athlète ? Cette action est irréversible.',
+            t('admin_athletes.confirm_delete'),
             {
-                title: 'Supprimer l\'athlète',
-                confirmText: 'Supprimer',
-                cancelText: 'Annuler',
+                title: t('admin_athletes.confirm_delete_title'),
+                confirmText: t('common.delete'),
+                cancelText: t('common.cancel'),
                 type: 'danger'
             }
         );
@@ -120,40 +122,51 @@ const Athletes = () => {
                 date_of_birth: editForm.date_of_birth ? editForm.date_of_birth.split('T')[0] : ''
             };
             await athleteAPI.update(selectedAthlete.id, payload);
-            notify.success('Profil mis à jour avec succès');
+            notify.success(t('common.success'));
             fetchAthletes(); // Refresh list
             setSelectedAthlete(payload); // Update local view
             setIsEditing(false);
         } catch (error) {
             console.error("Update error:", error);
-            notify.error('Erreur lors de la mise à jour');
+            notify.error(t('common.error'));
         }
     };
 
-    if (loading) return <div>Chargement...</div>;
+    const locale = i18n.language === 'ar' ? 'ar-EG' : 'fr-FR';
+
+    if (loading) return <div>{t('common.loading')}</div>;
+
+    const getStatusLabel = (status) => {
+        switch (status) {
+            case 'approved': return t('admin_athletes.status_approved');
+            case 'pending': return t('admin_athletes.status_pending');
+            case 'rejected': return t('admin_athletes.status_rejected');
+            default: return status;
+        }
+    };
 
     return (
         <div className="athletes-page">
             <div className="page-header">
-                <h1>Gestion des Athlètes</h1>
+                <h1>{t('admin_athletes.title')}</h1>
                 <div className="actions">
                     <input
                         type="text"
-                        placeholder="Rechercher..."
+                        placeholder={t('admin_athletes.search_placeholder')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="search-input"
                     />
                     <select value={filter} onChange={(e) => setFilter(e.target.value)} className="filter-select">
-                        <option value="all">Tous</option>
-                        <option value="approved">Approuvés</option>
-                        <option value="pending">En attente</option>
-                        <option value="rejected">Rejetés</option>
+                        <option value="all">{t('admin_athletes.filter_all')}</option>
+                        <option value="approved">{t('admin_athletes.filter_approved')}</option>
+                        <option value="pending">{t('admin_athletes.filter_pending')}</option>
+                        <option value="rejected">{t('admin_athletes.filter_rejected')}</option>
                     </select>
                     <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className="filter-select">
-                        <option value="all">💰 Tous paiements</option>
-                        <option value="paid">✅ Payés</option>
-                        <option value="unpaid">❌ Impayés</option>
+                        <option value="all">💰 {t('admin_athletes.payment_all')}</option>
+                        <option value="paid">✅ {t('admin_athletes.payment_paid')}</option>
+                        <option value="unpaid">❌ {t('admin_athletes.payment_unpaid')}</option>
                     </select>
                 </div>
             </div>
@@ -162,13 +175,13 @@ const Athletes = () => {
                 <table>
                     <thead>
                         <tr>
-                            <th>Nom</th>
-                            <th>Email</th>
-                            <th>Téléphone</th>
-                            <th>Date de Naissance</th>
-                            <th>Statut</th>
-                            <th>💰 Paiement</th>
-                            <th>Actions</th>
+                            <th>{t('admin_athletes.th_name')}</th>
+                            <th>{t('admin_athletes.th_email')}</th>
+                            <th>{t('admin_athletes.th_phone')}</th>
+                            <th>{t('admin_athletes.th_dob')}</th>
+                            <th>{t('admin_athletes.th_status')}</th>
+                            <th>💰 {t('admin_athletes.th_payment')}</th>
+                            <th>{t('admin_athletes.th_actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -179,54 +192,52 @@ const Athletes = () => {
                                 <td>{athlete.phone || '-'}</td>
                                 <td>
                                     {athlete.date_of_birth && !athlete.date_of_birth.startsWith('0001')
-                                        ? new Date(athlete.date_of_birth).toLocaleDateString()
+                                        ? new Date(athlete.date_of_birth).toLocaleDateString(locale)
                                         : '-'}
                                 </td>
                                 <td>
                                     <span className={`status-badge ${athlete.membership_status}`}>
-                                        {athlete.membership_status === 'approved' ? 'Approuvé' :
-                                            athlete.membership_status === 'pending' ? 'En attente' :
-                                                athlete.membership_status === 'rejected' ? 'Rejeté' : athlete.membership_status}
+                                        {getStatusLabel(athlete.membership_status)}
                                     </span>
                                 </td>
                                 <td>
                                     {athlete.payment_valid === true ? (
                                         <div>
-                                            <span className="status-badge approved">✅ Payé</span>
+                                            <span className="status-badge approved">✅ {t('admin_athletes.status_paid')}</span>
                                             {athlete.payment_end_date && (
                                                 <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>
-                                                    Jusqu'au {new Date(athlete.payment_end_date).toLocaleDateString()}
+                                                    {t('admin_athletes.until')} {new Date(athlete.payment_end_date).toLocaleDateString(locale)}
                                                 </div>
                                             )}
                                         </div>
                                     ) : athlete.payment_end_date ? (
                                         <div>
-                                            <span className="status-badge rejected">❌ Expiré</span>
+                                            <span className="status-badge rejected">❌ {t('admin_athletes.status_expired')}</span>
                                             <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>
-                                                Depuis {new Date(athlete.payment_end_date).toLocaleDateString()}
+                                                {t('admin_athletes.since')} {new Date(athlete.payment_end_date).toLocaleDateString(locale)}
                                             </div>
                                         </div>
                                     ) : (
-                                        <span className="status-badge inactive">⚠️ Aucun paiement</span>
+                                        <span className="status-badge inactive">⚠️ {t('admin_athletes.status_none')}</span>
                                     )}
                                 </td>
                                 <td>
                                     <div className="action-buttons">
-                                        <button onClick={() => handleViewDetails(athlete)} className="btn-view" title="Voir Détails">👁️</button>
+                                        <button onClick={() => handleViewDetails(athlete)} className="btn-view" title={t('common.view_details')}>👁️</button>
                                         {athlete.membership_status === 'pending' && (
                                             <>
-                                                <button onClick={() => handleApprove(athlete.id)} className="btn-approve" title="Approuver">✓</button>
-                                                <button onClick={() => handleReject(athlete.id)} className="btn-reject" title="Rejeter">✗</button>
+                                                <button onClick={() => handleApprove(athlete.id)} className="btn-approve" title={t('common.validate')}>✓</button>
+                                                <button onClick={() => handleReject(athlete.id)} className="btn-reject" title={t('common.reject')}>✗</button>
                                             </>
                                         )}
-                                        <button onClick={() => handleDelete(athlete.id)} className="btn-delete" title="Supprimer">🗑️</button>
+                                        <button onClick={() => handleDelete(athlete.id)} className="btn-delete" title={t('common.delete')}>🗑️</button>
                                     </div>
                                 </td>
                             </tr>
                         ))}
                         {filteredAthletes.length === 0 && (
                             <tr>
-                                <td colSpan="7" className="text-center">Aucun athlète trouvé</td>
+                                <td colSpan="7" className="text-center">{t('admin_athletes.no_athletes')}</td>
                             </tr>
                         )}
                     </tbody>
@@ -238,12 +249,12 @@ const Athletes = () => {
                 <div className="modal-overlay" onClick={closeDetailsModal}>
                     <div className="modal-content details-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2>Profil de {selectedAthlete.first_name} {selectedAthlete.last_name}</h2>
+                            <h2>{t('admin_athletes.profile_of')} {selectedAthlete.first_name} {selectedAthlete.last_name}</h2>
                             <div className="modal-actions">
                                 {!isEditing ? (
-                                    <button className="btn-edit" onClick={() => setIsEditing(true)}>✎ Modifier</button>
+                                    <button className="btn-edit" onClick={() => setIsEditing(true)}>✎ {t('common.edit')}</button>
                                 ) : (
-                                    <button className="btn-save" onClick={handleSaveDetails}>💾 Enregistrer</button>
+                                    <button className="btn-save" onClick={handleSaveDetails}>💾 {t('common.save')}</button>
                                 )}
                                 <button className="close-btn" onClick={closeDetailsModal}>&times;</button>
                             </div>
@@ -263,28 +274,28 @@ const Athletes = () => {
                                     <h3>{selectedAthlete.first_name} {selectedAthlete.last_name}</h3>
                                     <p className="email">{selectedAthlete.email}</p>
                                     <span className={`status-badge ${selectedAthlete.membership_status}`}>
-                                        {selectedAthlete.membership_status}
+                                        {getStatusLabel(selectedAthlete.membership_status)}
                                     </span>
                                 </div>
                             </div>
 
                             <div className="details-grid">
                                 <div className="details-section">
-                                    <h4>Informations Personnelles</h4>
+                                    <h4>{t('profile.personal_info')}</h4>
                                     <div className="info-row">
-                                        <span className="label">Date de Naissance:</span>
+                                        <span className="label">{t('profile.labels.dob')}:</span>
                                         {isEditing ? (
                                             <input type="date" name="date_of_birth" value={editForm.date_of_birth ? editForm.date_of_birth.split('T')[0] : ''} onChange={handleEditChange} className="edit-input" />
                                         ) : (
                                             <span className="value">
                                                 {selectedAthlete.date_of_birth && !selectedAthlete.date_of_birth.startsWith('0001')
-                                                    ? new Date(selectedAthlete.date_of_birth).toLocaleDateString()
+                                                    ? new Date(selectedAthlete.date_of_birth).toLocaleDateString(locale)
                                                     : '-'}
                                             </span>
                                         )}
                                     </div>
                                     <div className="info-row">
-                                        <span className="label">Sexe:</span>
+                                        <span className="label">{t('profile.labels.gender')}:</span>
                                         {isEditing ? (
                                             <select name="gender" value={editForm.gender || ''} onChange={handleEditChange} className="edit-input">
                                                 <option value="">Sélectionner</option>
@@ -296,7 +307,7 @@ const Athletes = () => {
                                         )}
                                     </div>
                                     <div className="info-row">
-                                        <span className="label">Téléphone:</span>
+                                        <span className="label">{t('profile.labels.phone')}:</span>
                                         {isEditing ? (
                                             <input type="text" name="phone" value={editForm.phone || ''} onChange={handleEditChange} className="edit-input" />
                                         ) : (
@@ -304,7 +315,7 @@ const Athletes = () => {
                                         )}
                                     </div>
                                     <div className="info-row">
-                                        <span className="label">Adresse:</span>
+                                        <span className="label">{t('profile.labels.address')}:</span>
                                         {isEditing ? (
                                             <input type="text" name="address" value={editForm.address || ''} onChange={handleEditChange} className="edit-input" />
                                         ) : (
@@ -316,11 +327,28 @@ const Athletes = () => {
                                 <div className="details-section">
                                     <h4>Informations Physiques</h4>
                                     <div className="info-row">
-                                        <span className="label">Poids (kg):</span>
+                                        <span className="label">{t('profile.labels.weight')}:</span>
                                         {isEditing ? (
                                             <input type="number" name="weight_kg" value={editForm.weight_kg || ''} onChange={handleEditChange} className="edit-input" />
                                         ) : (
                                             <span className="value">{selectedAthlete.weight_kg ? `${selectedAthlete.weight_kg} kg` : '-'}</span>
+                                        )}
+                                    </div>
+                                    <div className="info-row">
+                                        <span className="label">{t('profile.hero_badges.belt')}:</span>
+                                        {isEditing ? (
+                                            <select name="belt_level" value={editForm.belt_level || ''} onChange={handleEditChange} className="edit-input">
+                                                <option value="">Sélectionner</option>
+                                                <option value="Ceinture Blanche">Ceinture Blanche</option>
+                                                <option value="Ceinture Jaune">Ceinture Jaune</option>
+                                                <option value="Ceinture Orange">Ceinture Orange</option>
+                                                <option value="Ceinture Verte">Ceinture Verte</option>
+                                                <option value="Ceinture Bleue">Ceinture Bleue</option>
+                                                <option value="Ceinture Marron">Ceinture Marron</option>
+                                                <option value="Ceinture Noire">Ceinture Noire</option>
+                                            </select>
+                                        ) : (
+                                            <span className="value">{selectedAthlete.belt_level || 'Ceinture Blanche'}</span>
                                         )}
                                     </div>
                                     <div className="info-row">
@@ -332,7 +360,7 @@ const Athletes = () => {
                                         )}
                                     </div>
                                     <div className="info-row">
-                                        <span className="label">Groupe Sanguin:</span>
+                                        <span className="label">{t('profile.labels.blood_type')}:</span>
                                         {isEditing ? (
                                             <select name="blood_type" value={editForm.blood_type || ''} onChange={handleEditChange} className="edit-input">
                                                 <option value="">Sélectionner</option>
@@ -352,29 +380,29 @@ const Athletes = () => {
                                 </div>
 
                                 <div className="details-section full-width">
-                                    <h4>Informations Médicales</h4>
+                                    <h4>{t('profile.labels.medical')}</h4>
                                     <div className="info-row">
                                         <span className="label">Conditions:</span>
                                         {isEditing ? (
                                             <input type="text" name="medical_conditions" value={editForm.medical_conditions || ''} onChange={handleEditChange} className="edit-input" />
                                         ) : (
-                                            <span className="value">{selectedAthlete.medical_conditions || 'Aucune'}</span>
+                                            <span className="value">{selectedAthlete.medical_conditions || t('common.none')}</span>
                                         )}
                                     </div>
                                     <div className="info-row">
-                                        <span className="label">Allergies:</span>
+                                        <span className="label">{t('profile.labels.allergies')}:</span>
                                         {isEditing ? (
                                             <input type="text" name="allergies" value={editForm.allergies || ''} onChange={handleEditChange} className="edit-input" />
                                         ) : (
-                                            <span className="value">{selectedAthlete.allergies || 'Aucune'}</span>
+                                            <span className="value">{selectedAthlete.allergies || t('common.none')}</span>
                                         )}
                                     </div>
                                 </div>
 
                                 <div className="details-section full-width">
-                                    <h4>Contact d'Urgence</h4>
+                                    <h4>{t('profile.labels.emergency_contact')}</h4>
                                     <div className="info-row">
-                                        <span className="label">Nom:</span>
+                                        <span className="label">{t('admin_athletes.th_name')}:</span>
                                         {isEditing ? (
                                             <input type="text" name="emergency_contact_name" value={editForm.emergency_contact_name || ''} onChange={handleEditChange} className="edit-input" />
                                         ) : (
@@ -382,7 +410,7 @@ const Athletes = () => {
                                         )}
                                     </div>
                                     <div className="info-row">
-                                        <span className="label">Téléphone:</span>
+                                        <span className="label">{t('admin_athletes.th_phone')}:</span>
                                         {isEditing ? (
                                             <input type="text" name="emergency_contact_phone" value={editForm.emergency_contact_phone || ''} onChange={handleEditChange} className="edit-input" />
                                         ) : (
@@ -401,7 +429,7 @@ const Athletes = () => {
                             </div>
                         </div>
                         <div className="modal-footer">
-                            <button className="btn-secondary" onClick={closeDetailsModal}>Fermer</button>
+                            <button className="btn-secondary" onClick={closeDetailsModal}>{t('common.cancel')}</button>
                         </div>
                     </div>
                 </div>
