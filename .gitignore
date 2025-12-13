@@ -1,49 +1,40 @@
 # Dependencies
 node_modules/
-frontend/node_modules/
 
 # Build outputs
-build/
 frontend/build/
-dist/
+Backend/project/bin/
+Backend/project/pkg/
 
 # Environment variables
 .env
-frontend/.env
-Backend/project/.env
+*.env
 
-# Binaries
-Backend/project/server
-Backend/server
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Database
+*.db
+*.sqlite
 
 # Logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
 
 # OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Docker
-postgres-data/
-postgres-data-v2/
-Backend/postgres-data/
-Backend/postgres-data-v2/
+# Frontend cache
+frontend/node_modules/.cache/
 
-# IDEs
-.idea/
-.vscode/
-*.swp
-*.swo
+# Backend binaries
+Backend/project/cmd/*/main
+Backend/project/cmd/*/*.exe
