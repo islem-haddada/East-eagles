@@ -1690,3 +1690,215 @@ select {
         justify-content: center;
     }
 }
+
+/* ===================== MOBILE RESPONSIVE ===================== */
+@media (max-width: 768px) {
+    .profile-page {
+        padding: 0;
+    }
+    
+    /* Profile Header Hero */
+    .profile-hero {
+        padding: 1.5rem 1rem !important;
+        border-radius: 12px !important;
+    }
+    
+    .hero-content {
+        flex-direction: column !important;
+        text-align: center;
+        gap: 1rem !important;
+    }
+    
+    .hero-avatar {
+        width: 80px !important;
+        height: 80px !important;
+        font-size: 2rem !important;
+    }
+    
+    .hero-info h1 {
+        font-size: 1.3rem !important;
+    }
+    
+    .hero-badges {
+        justify-content: center !important;
+        flex-wrap: wrap;
+    }
+    
+    /* Tabs */
+    .profile-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 0.5rem !important;
+        padding-bottom: 0.5rem;
+    }
+    
+    .tab-btn {
+        padding: 0.6rem 1rem !important;
+        font-size: 0.85rem !important;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    
+    /* Info Grid */
+    .info-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+    
+    .info-item {
+        padding: 0.75rem !important;
+    }
+    
+    .info-item label {
+        font-size: 0.75rem !important;
+    }
+    
+    .info-item span {
+        font-size: 0.9rem !important;
+    }
+    
+    /* Documents Section */
+    .documents-upload-form {
+        padding: 1rem !important;
+    }
+    
+    .documents-upload-form .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .documents-upload-form input,
+    .documents-upload-form select {
+        font-size: 16px !important; /* Prevent zoom on iOS */
+    }
+    
+    /* Documents Table */
+    .documents-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -1rem;
+        padding: 0 1rem;
+    }
+    
+    .documents-history-table {
+        min-width: 600px;
+        font-size: 0.8rem;
+    }
+    
+    .documents-history-table th,
+    .documents-history-table td {
+        padding: 0.6rem 0.5rem !important;
+    }
+    
+    .doc-actions {
+        flex-direction: row;
+        gap: 4px !important;
+    }
+    
+    .doc-actions button {
+        padding: 6px 8px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    /* Documents Stats */
+    .docs-stats {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+    
+    .doc-stat {
+        font-size: 0.8rem !important;
+    }
+    
+    /* Timeline */
+    .documents-timeline {
+        padding: 1rem !important;
+    }
+    
+    .timeline-item {
+        padding: 0.75rem !important;
+    }
+    
+    /* Edit Form */
+    .edit-form .form-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .edit-form input,
+    .edit-form select {
+        font-size: 16px !important;
+    }
+    
+    /* Cards */
+    .section-card {
+        padding: 1rem !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    /* Buttons */
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+        padding: 0.8rem !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .full-width {
+        width: 100% !important;
+    }
+    
+    /* Delete Modal */
+    .delete-modal-overlay {
+        padding: 1rem;
+    }
+    
+    .delete-modal {
+        padding: 1.5rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .delete-modal h3 {
+        font-size: 1.2rem !important;
+    }
+    
+    .delete-modal-actions {
+        flex-direction: column;
+        gap: 0.75rem !important;
+    }
+    
+    .delete-modal-actions button {
+        width: 100%;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+    .hero-avatar {
+        width: 60px !important;
+        height: 60px !important;
+        font-size: 1.5rem !important;
+    }
+    
+    .hero-info h1 {
+        font-size: 1.1rem !important;
+    }
+    
+    .tab-btn {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .documents-history-table {
+        font-size: 0.7rem;
+    }
+    
+    .doc-actions button {
+        padding: 4px 6px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .preview-modal-header h3 {
+        font-size: 1rem !important;
+    }
+}

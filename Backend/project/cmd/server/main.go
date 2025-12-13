@@ -112,6 +112,13 @@ func main() {
 	router.HandleFunc("/api/auth/register", authHandler.Register).Methods("POST")
 	router.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST")
 
+	// Health check endpoint (public, for deployment)
+	router.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"healthy","service":"east-eagles-api"}`))
+	}).Methods("GET")
+
 	// Routes API (Subrouter for /api)
 	api := router.PathPrefix("/api").Subrouter()
 
