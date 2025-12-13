@@ -103,6 +103,19 @@
         "location": "الموقع",
         "level": "المستوى"
     },
+    "athlete_payments": {
+        "title": "مدفوعاتي",
+        "subscription_status": "حالة الاشتراك",
+        "expires_on": "ينتهي في",
+        "no_active_subscription": "لا يوجد اشتراك نشط.",
+        "transaction_history": "سجل المعاملات",
+        "date": "التاريخ",
+        "amount": "المبلغ",
+        "period": "المدة",
+        "validity": "الصلاحية",
+        "notes": "ملاحظات",
+        "no_payments": "لا توجد مدفوعات مسجلة."
+    },
     "admin_dashboard": {
         "subtitle": "نظرة عامة على النادي",
         "total_athletes": "إجمالي الرياضيين",

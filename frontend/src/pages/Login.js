@@ -34,11 +34,7 @@ const Login = () => {
                 <h2>{t('auth.login_title')}</h2>
                 {error && <div className="error-message">{error}</div>}
 
-                <div className="demo-credentials" style={{ background: '#f8f9fa', padding: '10px', borderRadius: '5px', marginBottom: '15px', fontSize: '0.9em', color: '#333' }}>
-                    <strong>{t('auth.demo_credentials')}:</strong><br />
-                    Admin: chef@admin.com / password123<br />
-                    Athlete: chef@athlete.com / password123
-                </div>
+                {/* Demo credentials removed as per user request */}
 
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">

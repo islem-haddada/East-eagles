@@ -42,12 +42,8 @@ const Home = () => {
           </div>
 
           <nav className="home-nav">
-            {!isAuthenticated && (
-              <>
-                <Link to="/login" className="nav-link">{t('auth.btn_login')}</Link>
-                <Link to="/register" className="btn btn-primary">{t('auth.btn_register')}</Link>
-              </>
-            )}
+            <Link to="/login" className="nav-link">{t('auth.btn_login')}</Link>
+            <Link to="/register" className="btn btn-primary">{t('auth.btn_register')}</Link>
           </nav>
         </div>
       </header>
@@ -56,13 +52,6 @@ const Home = () => {
         <div className="hero-content">
           <h1>{t('home.hero_title')}</h1>
           <p>{t('home.hero_subtitle')}</p>
-          <div className="hero-buttons">
-            {!isAuthenticated && (
-              <Link to="/register" className="btn btn-primary btn-large">
-                {t('home.btn_join')}
-              </Link>
-            )}
-          </div>
         </div>
       </section>
 

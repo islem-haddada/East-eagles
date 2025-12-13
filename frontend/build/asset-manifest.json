@@ -1,17 +1,17 @@
 {
   "files": {
-    "main.css": "/static/css/main.c6e65173.css",
-    "main.js": "/static/js/main.47039069.js",
+    "main.css": "/static/css/main.bbacc33e.css",
+    "main.js": "/static/js/main.957c7c5e.js",
     "static/media/sanda_action.png": "/static/media/sanda_action.1e1e7c98bae3004dfbca.png",
     "static/media/club_training.png": "/static/media/club_training.fd204ab394b171491017.png",
     "static/media/sanda_equipment.png": "/static/media/sanda_equipment.97e42e49b74c92442bf7.png",
     "static/media/logo.png": "/static/media/logo.06d8aab6c79a0c3bcb8e.png",
     "index.html": "/index.html",
-    "main.c6e65173.css.map": "/static/css/main.c6e65173.css.map",
-    "main.47039069.js.map": "/static/js/main.47039069.js.map"
+    "main.bbacc33e.css.map": "/static/css/main.bbacc33e.css.map",
+    "main.957c7c5e.js.map": "/static/js/main.957c7c5e.js.map"
   },
   "entrypoints": [
-    "static/css/main.c6e65173.css",
-    "static/js/main.47039069.js"
+    "static/css/main.bbacc33e.css",
+    "static/js/main.957c7c5e.js"
   ]
 }

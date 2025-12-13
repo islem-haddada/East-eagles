@@ -50,6 +50,33 @@ const Profile = () => {
         }
     };
 
+    const handleOpenDocument = async (docId, fileName) => {
+        try {
+            notify.info(t('common.loading'));
+            const response = await documentAPI.download(docId);
+
+            // Create blob link to download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+
+            // Extract filename or default
+            const name = fileName || 'document';
+            link.setAttribute('download', name);
+
+            document.body.appendChild(link);
+            link.click();
+
+            // Cleanup
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            notify.success(t('common.success'));
+        } catch (error) {
+            console.error("Download error", error);
+            notify.error("Erreur lors du téléchargement du fichier");
+        }
+    };
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -396,19 +423,32 @@ const Profile = () => {
                             </div>
 
                             <div className="documents-grid">
-                                {documents.map(doc => (
-                                    <div key={doc.id} className="document-card">
-                                        <div className={`doc-icon ${doc.document_type}`}>📄</div>
+                                {documents.sort((a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at)).map(doc => (
+                                    <div key={doc.id} className="document-card clickable" onClick={() => handleOpenDocument(doc.id, doc.original_name || `document-${doc.document_type}`)}>
+                                        <div className={`doc-icon-wrapper ${doc.document_type}`}>
+                                            <span className="doc-icon">📄</span>
+                                        </div>
                                         <div className="doc-info">
-                                            <h4>{doc.document_type.replace('_', ' ')}</h4>
-                                            <p className="doc-date">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
-                                            <span className={`status-pill ${doc.validation_status}`}>
-                                                {doc.validation_status}
-                                            </span>
+                                            <h4>{t(`admin_documents.label_${doc.document_type}`) || doc.document_type.replace(/_/g, ' ')}</h4>
+                                            <div className="doc-meta">
+                                                <p className="doc-date">Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                                                {doc.expiry_date && (
+                                                    <p className={`doc-expiry ${new Date(doc.expiry_date) < new Date() ? 'expired' : ''}`}>
+                                                        Expires: {new Date(doc.expiry_date).toLocaleDateString()}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="doc-status-row">
+                                                <span className={`status-pill ${doc.validation_status}`}>
+                                                    {doc.validation_status === 'approved' ? '✅ Validé' :
+                                                        doc.validation_status === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
+                                                </span>
+                                                <button className="btn-view-doc">👁️ Ouvrir</button>
+                                            </div>
                                         </div>
                                         {doc.rejection_reason && (
-                                            <div className="doc-rejection" title={doc.rejection_reason}>
-                                                ⚠️
+                                            <div className="doc-rejection-tooltip" title={doc.rejection_reason}>
+                                                ❓ Motif du rejet
                                             </div>
                                         )}
                                     </div>

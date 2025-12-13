@@ -103,6 +103,19 @@
         "location": "Lieu",
         "level": "Niveau"
     },
+    "athlete_payments": {
+        "title": "Mes Paiements",
+        "subscription_status": "Statut de l'Abonnement",
+        "expires_on": "Expire le",
+        "no_active_subscription": "Aucun abonnement actif.",
+        "transaction_history": "Historique des Transactions",
+        "date": "Date",
+        "amount": "Montant",
+        "period": "Période",
+        "validity": "Validité",
+        "notes": "Notes",
+        "no_payments": "Aucun paiement enregistré."
+    },
     "admin_dashboard": {
         "subtitle": "Vue d'ensemble de votre club",
         "total_athletes": "Total Athlètes",
